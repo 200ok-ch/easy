@@ -1,0 +1,37 @@
+* Welcome to EASY - Evented Accounting Sourced from Yaml
+
+=Easy= is a command line utility which generates artifacts typically
+used in accounting based on events provided as YAML files.
+
+Each YAML file contains one or more events.
+
+Some of the fields are optional some are mandatory. See [[src/easy/event.cljs][the Spec for
+details.]]
+
+** Example YAML file
+
+#+BEGIN_EXAMPLE
+---
+- type: revenue
+  date: 2017-12-04
+  customer: 6
+  number: 2
+  version: 1
+  deadline: 30
+  items:
+    - rate: 200
+      hours: 13.5
+      beneficiary: phil
+      discount: 0
+      timesheet: path/to/timesheet.csv
+#+END_EXAMPLE
+
+** Setup
+
+Easy runs on [[http://lumo-cljs.org/][lumo]] and uses node packages available via npm as well as
+ClojureScript packages available via clojars/maven.
+
+Hence you will need to install the npm dependencies via =npm install=.
+
+ClojureScript dependencies are installed via a =deps.edn= and =clj=
+(aka. CLI). Please install =clj= as described [[https://clojure.org/guides/deps_and_cli][here]]

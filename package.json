@@ -1,0 +1,21 @@
+{
+  "name": "easy",
+  "version": "1.0.0",
+  "description": "Evented Accounting Sourced from Yaml",
+  "main": "index.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@gitlab.200ok.ch:management/admin.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "js-yaml": "^3.12.0"
+  }
+}
