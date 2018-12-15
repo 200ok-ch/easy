@@ -34,4 +34,10 @@ ClojureScript packages available via clojars/maven.
 Hence you will need to install the npm dependencies via =npm install=.
 
 ClojureScript dependencies are installed via a =deps.edn= and =clj=
-(aka. CLI). Please install =clj= as described [[https://clojure.org/guides/deps_and_cli][here]]
+(aka. CLI). Please install =clj= as described [[https://clojure.org/guides/deps_and_cli][here]].
+
+** Usage
+
+*** Example
+
+=easy example.yml | ledger bal -f -=

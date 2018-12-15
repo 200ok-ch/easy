@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "handlebars": "^4.0.12",
     "js-yaml": "^3.12.0"
   }
 }
