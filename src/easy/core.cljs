@@ -1,5 +1,5 @@
 (ns easy.core
-  "This namespace currently does too much. I'm mostly working her ATM,
+  "This namespace currently does too much. I'm mostly working here ATM,
   and as I see groups of functions that should make up a namespace I
   move them there."
   (:require
@@ -9,6 +9,7 @@
    ;; via npm
    ["js-yaml" :as yaml]
    ["handlebars" :as hbs]
+   ["sprintf-js" :refer [sprintf]]
 
    ;; via clojars/maven
    [cljs-time.core :as cljs-time]
@@ -64,19 +65,25 @@
   (->> (tax-rate-out revenue)
        (assoc revenue :tax-rate-out)))
 
+(def round-currency
+  (comp js/parseFloat (partial sprintf "%.2f")))
+
 (defn add-tax-in [revenue]
   (->> (:net-total revenue)
        (* (:tax-rate-in revenue))
+       round-currency
        (assoc revenue :tax-in)))
 
 (defn add-tax-out [revenue]
   (->> (:net-total revenue)
        (* (:tax-rate-out revenue))
+       round-currency
        (assoc revenue :tax-out)))
 
 (defn add-tax-win [revenue]
   (->> (:tax-out revenue)
        (- (:tax-in revenue))
+       round-currency
        (assoc revenue :tax-win)))
 
 (defn add-item-amount [item]
@@ -108,7 +115,7 @@
        (assoc revenue :invoice-no)))
 
 (defn add-ledger-template [revenue]
-  (assoc revenue :ledger-template "vorlagen/ledger.dat.hbs"))
+  (assoc revenue :ledger-template "vorlagen/revenue.dat.hbs"))
 
 (defmulti transform
   "Events will be transformed based on their type."
@@ -145,6 +152,7 @@
   (partial apply-template :ledger-template))
 
 (defn -main [& args]
+  ;; TODO if (first args) is a directory work on all yaml files
   (let [content (slurp (first args))
         events (parse-yaml content)]
     (if (s/valid? ::event/events events)
