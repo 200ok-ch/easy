@@ -35,12 +35,20 @@
 (def iso-formatter
   (time/formatter "yyyy-MM-dd"))
 
-(defn add-isodate [event]
+(defn add-iso-date [event]
   (->> event
        :date
        cljs-time/date-time
        (time/unparse iso-formatter)
-       (assoc event :isodate)))
+       (assoc event :iso-date)))
+
+(defn add-iso-settled [event]
+  (if-let [settled (:settled event)]
+    (->> settled
+         cljs-time/date-time
+         (time/unparse iso-formatter)
+         (assoc event :iso-settled))
+    event))
 
 (defn tax-rate-in [revenue]
   (if (< (:date revenue)
@@ -121,6 +129,31 @@
 (defn add-ledger-template [revenue path]
   (assoc revenue :ledger-template path))
 
+;; TODO rewrite in a way that it does not need to be adjusted for
+;; every year
+(defn add-tax-period [revenue]
+  (->> (if-let [date (:settled revenue)]
+         (cond
+           (and (>= date (time/parse "2018-01-01"))
+                (<= date (time/parse "2018-05-31")))
+           "2018-S1"
+           (and (>= date (time/parse "2018-06-01"))
+                (<= date (time/parse "2018-12-31")))
+           "2018-S2"
+           (and (>= date (time/parse "2019-01-01"))
+                (<= date (time/parse "2019-05-31")))
+           "2019-S1"
+           (and (>= date (time/parse "2019-06-01"))
+                (<= date (time/parse "2019-12-31")))
+           "2019-S2"
+           :else "Unknown")
+         "Unsettled")
+       (assoc revenue :tax-period)))
+
+(defn add-ledger-state [revenue]
+  (->> (if (:settled revenue) "*" "!")
+       (assoc revenue :ledger-state)))
+
 (defmulti transform
   "Events will be transformed based on their type."
   (comp keyword :type))
@@ -130,10 +163,12 @@
     (-> event
         revenue/merge-defaults
         ;; TODO item/merge-defaults
-        add-isodate
+        add-iso-date
+        add-iso-settled
+        add-ledger-state
         add-tax-rate-in
         add-tax-rate-out
-        ;; TODO add-tax-period
+        add-tax-period
         ;; TODO read-timesheets
         ;; TODO add-items-hours
         add-items-amount
@@ -150,8 +185,9 @@
 (defmethod transform :expense [event]
   (if (s/valid? ::expense/event event)
     (-> event
-        add-isodate
+        add-iso-date
         ;; TODO implement
+        (assoc :ledger-state "*")
         (add-ledger-template "vorlagen/expense.dat.hbs"))
     ;; else explain
     (s/explain ::expense/event event)))

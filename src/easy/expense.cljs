@@ -10,10 +10,13 @@
 
 (s/def ::beneficiary string?)
 
+(s/def ::description string?)
+
 (s/def ::event (s/keys :req-un [::type
                                 ::date
                                 ::amount
-                                ::beneficiary]))
+                                ::beneficiary]
+                       :opt-un [::description]))
 
 (def defaults
   {})

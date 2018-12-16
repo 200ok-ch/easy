@@ -7,6 +7,8 @@
 
 (s/def ::date date?)
 
+(s/def ::settled date?)
+
 (s/def ::customer int?)
 
 (s/def ::number int?)
@@ -23,7 +25,8 @@
                                 ::number
                                 ::version
                                 ::items]
-                       :opt-un [::deadline]))
+                       :opt-un [::settled
+                                ::deadline]))
 
 (def defaults
   {:deadline 30})
