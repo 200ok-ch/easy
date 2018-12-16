@@ -1,12 +1,16 @@
 * Welcome to EASY - Evented Accounting Sourced from Yaml
 
-=Easy= is a command line utility which generates artifacts typically
+=easy= is a command line utility which generates artifacts typically
 used in accounting based on events provided as YAML files.
 
 Each YAML file contains one or more events.
 
-Some of the fields are optional some are mandatory. See [[src/easy/event.cljs][the Spec for
-details.]]
+Some of the fields are optional some are mandatory. See the Specs for details:
+
+- [[src/easy/common.cljs][common]]
+  - [[src/easy/expense.cljs][expense]]
+  - [[src/easy/revenue.cljs][revenue]]
+    - [[src/easy/revenue/item.cljs][revenue item]]
 
 ** Example YAML file
 
