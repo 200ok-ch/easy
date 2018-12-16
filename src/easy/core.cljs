@@ -91,6 +91,7 @@
   (->> (map item [:rate :hours])
        (apply *)
        ;; TODO calculate and subtract discount
+       round-currency
        (assoc item :amount)))
 
 (defn add-items-amount [revenue]
@@ -102,11 +103,13 @@
        (map :amount)
        (reduce +)
        ;; TODO calculate and subtract discount
+       round-currency
        (assoc revenue :net-total)))
 
 (defn add-gross-total [revenue]
   (->> (+ (:net-total revenue)
           (:tax-in revenue))
+       round-currency
        (assoc revenue :gross-total)))
 
 (defn add-invoice-no [revenue]
