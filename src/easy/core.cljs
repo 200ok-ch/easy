@@ -16,8 +16,9 @@
    [cljs-time.format :as time]
 
    ;; from this codebase
-   [easy.item :as item]
-   [easy.event :as event]
+   [easy.common :as common]
+   [easy.expense :as expense]
+   [easy.revenue :as revenue]
 
    ;; from clojurescript stdlib
    [cljs.pprint :refer [pprint]]
@@ -114,33 +115,43 @@
        (join ".")
        (assoc revenue :invoice-no)))
 
-(defn add-ledger-template [revenue]
-  (assoc revenue :ledger-template "vorlagen/revenue.dat.hbs"))
+(defn add-ledger-template [revenue path]
+  (assoc revenue :ledger-template path))
 
 (defmulti transform
   "Events will be transformed based on their type."
   (comp keyword :type))
 
 (defmethod transform :revenue [event]
-  (-> event
-      add-isodate
-      add-tax-rate-in
-      add-tax-rate-out
-      ;; TODO add-tax-period
-      ;; TODO read-timesheets
-      ;; TODO add-items-hours
-      add-items-amount
-      add-net-total
-      add-tax-in
-      add-tax-out
-      add-tax-win
-      add-gross-total
-      add-invoice-no
-      add-ledger-template))
+  (if (s/valid? ::revenue/event event)
+    (-> event
+        revenue/merge-defaults
+        ;; TODO item/merge-defaults
+        add-isodate
+        add-tax-rate-in
+        add-tax-rate-out
+        ;; TODO add-tax-period
+        ;; TODO read-timesheets
+        ;; TODO add-items-hours
+        add-items-amount
+        add-net-total
+        add-tax-in
+        add-tax-out
+        add-tax-win
+        add-gross-total
+        add-invoice-no
+        (add-ledger-template "vorlagen/revenue.dat.hbs"))
+    ;; else explain
+    (s/explain ::revenue/event event)))
 
 (defmethod transform :expense [event]
-  ;; TODO implement
-  event)
+  (if (s/valid? ::expense/event event)
+    (-> event
+        add-isodate
+        ;; TODO implement
+        (add-ledger-template "vorlagen/expense.dat.hbs"))
+    ;; else explain
+    (s/explain ::expense/event event)))
 
 (defn apply-template [template-key event]
   (let [path (template-key event)
@@ -155,10 +166,8 @@
   ;; TODO if (first args) is a directory work on all yaml files
   (let [content (slurp (first args))
         events (parse-yaml content)]
-    (if (s/valid? ::event/events events)
-      (let [;; TODO item/merge-defaults
-            input-with-defaults (map event/merge-defaults events)
-            output (map transform input-with-defaults)
+    (if (s/valid? ::common/events events)
+      (let [output (map transform events)
             ledger (map render-ledger output)]
         ;; (println "INPUT EVENTS")
         ;; (pprint input-with-defaults)
@@ -167,4 +176,4 @@
         ;; (println "LEDGER")
         (println (join "\n" ledger)))
       ;; if invalid explain...
-      (s/explain ::event/events events))))
+      (s/explain ::common/events events))))

@@ -1,4 +1,4 @@
-(ns easy.item
+(ns easy.revenue.item
   (:require [cljs.spec.alpha :as s]))
 
 (s/def ::rate float?)
@@ -16,8 +16,6 @@
                                ::beneficiary]
                       :opt-un [::timesheet
                                ::discount]))
-
-(s/def ::items (s/coll-of ::item))
 
 (def defaults
   {:discount 0})
