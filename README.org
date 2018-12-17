@@ -42,6 +42,13 @@ ClojureScript dependencies are installed via a =deps.edn= and =clj=
 
 ** Usage
 
-*** Example
+*** Examples
 
-=easy example.yml | ledger bal -f -=
+Render ledger entries from events and run the through ledger to create
+a balance:
+
+=easy ledger example.yml | ledger bal -f -=
+
+Render invoice 18.2.1 to latex:
+
+=easy invoice example.yml 18.2.1=

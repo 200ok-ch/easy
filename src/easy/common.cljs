@@ -29,6 +29,3 @@
        cljs-time/date-time
        (time/unparse util/iso-formatter)
        (assoc event :iso-date)))
-
-(defn add-ledger-template [revenue path]
-  (assoc revenue :ledger-template path))

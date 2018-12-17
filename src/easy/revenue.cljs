@@ -51,6 +51,9 @@
 ;; ------------------------------------------------------------
 ;; transformer
 
+;; TODO add doc strings to all functions
+;; TODO add pre conditions to all functions
+
 (defn add-iso-settled [event]
   (if-let [settled (:settled event)]
     (->> settled
@@ -59,12 +62,14 @@
          (assoc event :iso-settled))
     event))
 
+;; TODO make the tax rate configurable via config
 (defn tax-rate-in [revenue]
   (if (< (:date revenue)
          (time/parse "2018-01-01"))
     0.08
     0.077))
 
+;; TODO make the tax rate configurable via config
 (defn tax-rate-out [revenue]
   (let [date (:date revenue)]
     (cond
@@ -153,10 +158,15 @@
          "Unsettled")
        (assoc revenue :tax-period)))
 
-(defn add-ledger-state [revenue]
+(defn add-ledger-state
+  "Sets `:ledger-state` to either `*` or `!`, depending on the presence
+  of `:settled`"
+  [revenue]
   (->> (if (:settled revenue) "*" "!")
        (assoc revenue :ledger-state)))
 
+;; TODO rewrite in a way that it does not need to be adjusted for
+;; every year
 (defn add-period [revenue]
   (->> (let [date (:date revenue)]
          (cond
@@ -177,6 +187,13 @@
            "2019-S2"
            :else "Unknown"))
        (assoc revenue :period)))
+
+(defn add-templates [revenue]
+  (-> revenue
+      (assoc :latex-template
+             (get-in @config [:templates :latex :invoice]))
+      (assoc :ledger-template
+             (get-in @config [:templates :ledger :revenue]))))
 
 (defmethod transform :revenue [event]
   (if (s/valid? ::event event)
@@ -199,7 +216,9 @@
         add-tax-out
         add-tax-win
         add-invoice-no
-        (common/add-ledger-template
-         (get-in @config [:templates :revenue])))
+        ;; TODO add-invoice-settings, e.g. phil, alain, neutral
+        ;; TODO add-customer-number, e.g. 2017-4
+        ;; TODO add-customer-address
+        add-templates)
     ;; else explain
     (s/explain ::event event)))

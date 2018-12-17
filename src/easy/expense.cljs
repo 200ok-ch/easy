@@ -41,7 +41,7 @@
     (-> event
         common/add-iso-date
         (assoc :ledger-state "*") ;; always cleared
-        (common/add-ledger-template
-         (get-in @config [:templates :expense])))
+        (assoc :ledger-template
+               (get-in @config [:templates :ledger :expense])))
     ;; else explain
     (s/explain ::event event)))
