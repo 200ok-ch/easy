@@ -9,7 +9,7 @@
 ;; spec
 
 (def match-iso-date (partial re-matches #"^\d{4}-\d\d-\d\d$"))
-(def match-template (partial re-matches #"\.hbs$"))
+(def match-template (partial re-matches #".*\.hbs$"))
 
 ;; required
 (s/def ::type #{"revenue" "expense"})
@@ -22,6 +22,11 @@
 
 ;; ------------------------------------------------------------
 ;; transformer
+
+(defn validate!
+  "Same as `util/validate!`, but with arguments swapped."
+  [x spec]
+  (util/validate! spec x))
 
 (defn add-iso-date [event]
   (->> event

@@ -39,8 +39,10 @@
 (s/def ::net-total float?)
 (s/def ::gross-total float?)
 (s/def ::invoice-no (s/and string? match-invoice-no))
-(s/def ::tax-period (s/and string? match-period))
-(s/def ::period (s/and string? match-period))
+(s/def ::tax-period (s/or :settled (s/and string? match-period)
+                          :unsettled #{"Unsettled"}))
+(s/def ::period (s/or :settled (s/and string? match-period)
+                      :unsettled #{"Unsettled"}))
 (s/def ::ledger-state #{"!" "*"})
 (s/def ::ledger-template (s/and string? common/match-template))
 (s/def ::latex-template (s/and string? common/match-template))
@@ -230,8 +232,8 @@
               (get-in @config [:templates :ledger :revenue]))))
 
 (defmethod transform :revenue [event]
-  (util/validate! ::event event)
   (-> event
+      (common/validate! ::event)
       merge-defaults
       ;; TODO item/merge-defaults
       common/add-iso-date
@@ -253,4 +255,5 @@
       ;; TODO add-invoice-settings, e.g. phil, alain, neutral
       ;; TODO add-customer-number, e.g. 2017-4
       ;; TODO add-customer-address
-      add-templates))
+      add-templates
+      (common/validate! ::event)))

@@ -39,8 +39,11 @@
 
 (defn validate!
   "Validates `x` against `spec` and exits the process in case `x` does
-  not validate"
+  not validate. If it validates it returns `x`. (`common/validate!`
+  uses this, but has the arguments swapped.)"
   [spec x]
-  (when-not (s/valid? spec x)
-    (s/explain spec x)
-    (process.exit 1)))
+  (if-not (s/valid? spec x)
+    (do
+      (s/explain spec x)
+      (process.exit 1))
+    x))

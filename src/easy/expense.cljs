@@ -39,9 +39,10 @@
 ;; transformer
 
 (defmethod transform :expense [event]
-  (util/validate! ::event event)
   (-> event
+      (common/validate! ::event)
       common/add-iso-date
       (assoc* :ledger-state "*") ;; always cleared
       (assoc* :ledger-template
-              (get-in @config [:templates :ledger :expense]))))
+              (get-in @config [:templates :ledger :expense]))
+      (common/validate! ::event)))

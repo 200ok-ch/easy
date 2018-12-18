@@ -1,27 +1,24 @@
 (ns easy.core
   "This is the entry point. The -main function gets called from lumo."
-  (:require
-   ;; via npm
-   ["handlebars" :as hbs]
-   ["handlebars-helpers" :as hbsh]
+  (:require ["handlebars" :as hbs] ;; via npm
+            ["handlebars-helpers" :as hbsh]
+            [easy.util :as util] ;; from this codebase
+            [easy.config :as config]
+            [easy.common :as common]
+            [easy.transform :refer [transform]]
+            easy.revenue
+            easy.expense
+            [cljs.pprint :refer [pprint]] ;; from clojurescript stdlib
+            [cljs.spec.alpha :as s]
+            [clojure.string :refer [join]]))
 
-   ;; from this codebase
-   [easy.util :as util]
-   [easy.config :as config]
-   [easy.common :as common]
-   [easy.transform :refer [transform]]
-   easy.revenue
-   easy.expense
+;; ------------------------------------------------------------
+;; templating
 
-   ;; from clojurescript stdlib
-   [cljs.pprint :refer [pprint]]
-   [cljs.spec.alpha :as s]
-   [clojure.string :refer [join]]))
+(hbsh) ;; attaches the handlebars-helpers
 
-;; attach handlebars-helpers
-(hbsh)
-
-(defn apply-template [template-key event]
+;; TODO don't read and parse the same template over and over again
+(defn- apply-template [template-key event]
   (let [path (template-key event)
         source (util/slurp path)
         renderer (hbs/compile source)]
@@ -33,32 +30,42 @@
 (def render-latex
   (partial apply-template :latex-template))
 
+;; ------------------------------------------------------------
+;; subcommands
+
 ;; TODO dry up code duplication in the command functions
 
-(defn ledger! [& args]
-  ;; TODO if (first args) is a directory work on all yaml files
-  (let [content (util/slurp (first args))
-        events (util/parse-yaml content)]
-    (util/validate! ::common/events events)
-    (let [output (map transform events)
-          ledger (map render-ledger output)]
-      (println (join "\n" ledger)))))
+(defn ledger! [source & args]
+  (->> source
+       util/slurp
+       util/parse-yaml
+       (util/validate! ::common/events)
+       (map transform)
+       (map render-ledger)
+       (join "\n")
+       println))
 
 (defn invoice! [source no & args]
-  (let [content (util/slurp source)
-        raw-events (util/parse-yaml content)]
-    (util/validate! ::common/events raw-events)
-    (let [events (map transform raw-events)
-          event (first (filter #(= (:invoice-no %) no) events))]
-      (println (render-latex event)))))
+  (->> source
+       util/slurp
+       util/parse-yaml
+       (util/validate! ::common/events)
+       (map transform)
+       (filter #(= (:invoice-no %) no))
+       first
+       render-latex
+       println))
 
-(defn transform! [& args]
-  ;; TODO if (first args) is a directory work on all yaml files
-  (let [content (util/slurp (first args))
-        events (util/parse-yaml content)]
-    (util/validate! ::common/events events)
-    (let [output (map transform events)]
-      (pprint output))))
+(defn transform! [source & args]
+  (->> source
+       util/slurp
+       util/parse-yaml
+       (util/validate! ::common/events)
+       (map transform)
+       pprint))
+
+;; ------------------------------------------------------------
+;; main
 
 (defn -main [command & args]
   (config/load!)
