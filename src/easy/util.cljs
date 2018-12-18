@@ -1,12 +1,9 @@
 (ns easy.util
-  (:require
-   ;; from node stdlib
-   ["fs" :as fs]
-   ;; via npm
-   ["js-yaml" :as yaml]
-   ["sprintf-js" :refer [sprintf]]
-   ;; from clojars/maven
-   [cljs-time.format :as time]))
+  (:require [cljs.spec.alpha :as s]
+            ["fs" :as fs]
+            ["js-yaml" :as yaml]
+            ["sprintf-js" :refer [sprintf]]
+            [cljs-time.format :as time]))
 
 (defn slurp [path]
   (.readFileSync fs path "utf8"))
@@ -31,3 +28,19 @@
 
 (def round-currency
   (comp js/parseFloat (partial sprintf "%.2f")))
+
+(defn assoc*
+  "Like `assoc` but adds `key` only if hashmap does not already have
+  `key`. Also takes only one `key` and `value`."
+  [hashmap key value]
+  (if (contains? hashmap key)
+    hashmap
+    (assoc hashmap key value)))
+
+(defn validate!
+  "Validates `x` against `spec` and exits the process in case `x` does
+  not validate"
+  [spec x]
+  (when-not (s/valid? spec x)
+    (s/explain spec x)
+    (process.exit 1)))

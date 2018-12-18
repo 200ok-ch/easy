@@ -33,33 +33,21 @@
 (def render-latex
   (partial apply-template :latex-template))
 
-(defn validate!
-  "Validates events and exits the process in case they don't validate"
-  [events]
-  (when-not (s/valid? ::common/events events)
-    (s/explain ::common/events events)
-    (process.exit 1)))
-
 ;; TODO dry up code duplication in the command functions
 
 (defn ledger! [& args]
   ;; TODO if (first args) is a directory work on all yaml files
   (let [content (util/slurp (first args))
         events (util/parse-yaml content)]
-    (validate! events)
+    (util/validate! ::common/events events)
     (let [output (map transform events)
           ledger (map render-ledger output)]
-      ;; (println "INPUT EVENTS")
-      ;; (pprint input-with-defaults)
-      ;; (println "TRANSFORMED EVENTS")
-      ;; (pprint output)
-      ;; (println "LEDGER")
       (println (join "\n" ledger)))))
 
 (defn invoice! [source no & args]
   (let [content (util/slurp source)
         raw-events (util/parse-yaml content)]
-    (validate! raw-events)
+    (util/validate! ::common/events raw-events)
     (let [events (map transform raw-events)
           event (first (filter #(= (:invoice-no %) no) events))]
       (println (render-latex event)))))
@@ -68,7 +56,7 @@
   ;; TODO if (first args) is a directory work on all yaml files
   (let [content (util/slurp (first args))
         events (util/parse-yaml content)]
-    (validate! events)
+    (util/validate! ::common/events events)
     (let [output (map transform events)]
       (pprint output))))
 
