@@ -52,3 +52,8 @@ a balance:
 Render invoice 18.2.1 to latex:
 
 =easy invoice example.yml 18.2.1=
+
+Just run a transform to see the transformed events, which is handy for
+writing templates:
+
+=easy transform example.yml=

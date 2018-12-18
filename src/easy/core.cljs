@@ -40,6 +40,8 @@
     (s/explain ::common/events events)
     (process.exit 1)))
 
+;; TODO dry up code duplication in the command functions
+
 (defn ledger! [& args]
   ;; TODO if (first args) is a directory work on all yaml files
   (let [content (util/slurp (first args))
@@ -62,9 +64,18 @@
           event (first (filter #(= (:invoice-no %) no) events))]
       (println (render-latex event)))))
 
+(defn transform! [& args]
+  ;; TODO if (first args) is a directory work on all yaml files
+  (let [content (util/slurp (first args))
+        events (util/parse-yaml content)]
+    (validate! events)
+    (let [output (map transform events)]
+      (pprint output))))
+
 (defn -main [command & args]
   (config/load!)
   (case (keyword command)
     :ledger (apply ledger! args)
     :invoice (apply invoice! args)
+    :transform (apply transform! args)
     (println (str "Unknown command: " command))))
