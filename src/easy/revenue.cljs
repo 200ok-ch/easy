@@ -9,7 +9,6 @@
             [cljs-time.core :as cljs-time]
             [cljs-time.format :as time]))
 
-
 ;; ------------------------------------------------------------
 ;; spec
 
@@ -29,8 +28,8 @@
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::iso-settled (s/and string? common/match-iso-date))
 (s/def ::deadline pos-int?) ;; in days
-(s/def ::latex-header string?)
-(s/def ::latex-footer string?)
+(s/def ::header string?)
+(s/def ::footer string?)
 (s/def ::tax-rate-in float?)
 (s/def ::tax-rate-out float?)
 (s/def ::tax-in float?)
@@ -55,8 +54,8 @@
                                 ::items]
                        :opt-un [::settled
                                 ::deadline
-                                ::latex-header
-                                ::latex-footer
+                                ::header
+                                ::footer
                                 ::iso-date
                                 ::iso-settled
                                 ::tax-rate-in

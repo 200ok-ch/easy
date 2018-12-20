@@ -64,6 +64,34 @@
        (map transform)
        pprint))
 
+(defn noop! [& args]
+  (do)) ;; nothin'
+
+;; ------------------------------------------------------------
+;; stdin
+
+;; (def stdin process.stdin)
+;; (def input (atom []))
+;;
+;; (.resume stdin)
+;; (.setEncoding stdin "utf8")
+;;
+;; (defn receive-data [data]
+;;   (swap! input conj data))
+;;
+;; (.on stdin "data" receive-data)
+;;
+;; (defn receive-end []
+;;   ;; As long as @input is a vector, we're still reading input. When
+;;   ;; reading input is finished @input is a string.
+;;   (swap! input join)
+;;   ;; TODO work with @input, i.e. continue to run the subcommand (maybe
+;;   ;; decide with a flag if input from stdin is expected because this
+;;   ;; changes the behavior quite drastically.)
+;;   (println @input))
+;;
+;; (.on stdin "end" receive-end)
+
 ;; ------------------------------------------------------------
 ;; main
 
@@ -73,4 +101,10 @@
     :ledger (apply ledger! args)
     :invoice (apply invoice! args)
     :transform (apply transform! args)
-    (println (str "Unknown command: " command))))
+    :noop (noop!)
+    ;; else
+    (do
+      (println (str "Unknown command: " command))
+      (process.exit 1)))
+  ;; all good
+  (process.exit 0))
