@@ -3,7 +3,8 @@
   (:require ["handlebars" :as hbs] ;; via npm
             ["handlebars-helpers" :as hbsh]
             [easy.util :as util] ;; from this codebase
-            [easy.config :as config]
+            [easy.config :as config :refer [config]]
+            [easy.customers :as customers]
             [easy.common :as common]
             [easy.transform :refer [transform]]
             easy.revenue
@@ -67,6 +68,13 @@
 (defn noop! [& args]
   (do)) ;; nothin'
 
+(defn validate! [source & args]
+  (->> source
+       util/slurp
+       util/parse-yaml
+       (util/validate! ::common/events)
+       (map transform)))
+
 ;; ------------------------------------------------------------
 ;; stdin
 
@@ -97,11 +105,13 @@
 
 (defn -main [command & args]
   (config/load!)
+  (swap! config assoc :customers (customers/load))
   (case (keyword command)
     :ledger (apply ledger! args)
     :invoice (apply invoice! args)
     :transform (apply transform! args)
     :noop (noop!)
+    :validate (apply validate! args)
     ;; else
     (do
       (println (str "Unknown command: " command))

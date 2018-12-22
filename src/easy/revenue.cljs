@@ -5,6 +5,7 @@
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]
             [easy.revenue.item :as item]
+            [easy.customers :as customers]
             [clojure.string :refer [join]]
             [cljs-time.core :as cljs-time]
             [cljs-time.format :as time]))
@@ -18,7 +19,7 @@
 ;; required
 (s/def ::type #{"revenue"})
 (s/def ::date util/date?)
-(s/def ::customer pos-int?)
+(s/def ::customer-id pos-int?)
 (s/def ::number pos-int?) ;; sequence
 (s/def ::version pos-int?)
 (s/def ::items (s/coll-of ::item/item))
@@ -48,11 +49,12 @@
 
 (s/def ::event (s/keys :req-un [::type
                                 ::date
-                                ::customer
+                                ::customer-id
                                 ::number
                                 ::version
                                 ::items]
-                       :opt-un [::settled
+                       :opt-un [::customers/customer
+                                ::settled
                                 ::deadline
                                 ::header
                                 ::footer
@@ -86,6 +88,13 @@
 
 ;; TODO add doc strings to all functions
 ;; TODO add pre conditions to all functions
+
+(defn lookup-customer [{id :customer-id :as event}]
+  (->> @config
+       :customers
+       (filter #(= id (:number %)))
+       first
+       (assoc* event :customer)))
 
 (defn add-iso-settled [event]
   (if-let [settled (:settled event)]
@@ -167,7 +176,7 @@
        (assoc* revenue :gross-total)))
 
 (defn add-invoice-no [revenue]
-  (->> [:customer :number :version]
+  (->> [:customer-id :number :version]
        (map revenue)
        (join ".")
        (assoc* revenue :invoice-no)))
@@ -234,6 +243,7 @@
   (-> event
       (common/validate! ::event)
       merge-defaults
+      lookup-customer
       ;; TODO item/merge-defaults
       common/add-iso-date
       add-iso-settled

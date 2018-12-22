@@ -1,9 +1,14 @@
 (ns easy.util
   (:require [cljs.spec.alpha :as s]
+            [clojure.pprint :refer [pprint]]
             ["fs" :as fs]
             ["js-yaml" :as yaml]
             ["sprintf-js" :refer [sprintf]]
             [cljs-time.format :as time]))
+
+(defn spy [x]
+  (pprint x)
+  x)
 
 (defn slurp [path]
   (.readFileSync fs path "utf8"))
