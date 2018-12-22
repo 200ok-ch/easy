@@ -6,9 +6,14 @@
    :templates
    {:ledger
     {:expense "templates/expense.dat.hbs"
-     :revenue "templates/revenue.dat.hbs"}
-    :latex
-    {:invoice "templates/invoice.tex.hbs"}}})
+     :revenue "templates/revenue.dat.hbs"}}
+   :invoice
+   {:latex
+    {:template "templates/invoice.tex.hbs"
+     :directory "customers/{{name}}/invoices"
+     :filename "{{iso-date}}.tex"}
+    :report
+    {:template "templates/report.txt.hbs"}}})
 
 (def config (atom default-config))
 

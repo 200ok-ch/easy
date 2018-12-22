@@ -2,11 +2,12 @@
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
+            [easy.templating :as templating]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]
             [easy.revenue.item :as item]
             [easy.customers :as customers]
-            [clojure.string :refer [join]]
+            [clojure.string :refer [join replace split]]
             [cljs-time.core :as cljs-time]
             [cljs-time.format :as time]))
 
@@ -46,6 +47,10 @@
 (s/def ::ledger-state #{"!" "*"})
 (s/def ::ledger-template (s/and string? common/match-template))
 (s/def ::latex-template (s/and string? common/match-template))
+(s/def ::latex-content string?)
+(s/def ::latex-directory string?)
+(s/def ::latex-filename string?)
+(s/def ::pdflatex-cmd string?)
 
 (s/def ::event (s/keys :req-un [::type
                                 ::date
@@ -72,7 +77,11 @@
                                 ::period
                                 ::ledger-state
                                 ::ledger-template
-                                ::latex-template]))
+                                ::latex-template
+                                ::latex-content
+                                ::latex-directory
+                                ::latex-filename
+                                ::pdflatex-cmd]))
 
 ;; ------------------------------------------------------------
 ;; defaults
@@ -234,10 +243,56 @@
 
 (defn add-templates [revenue]
   (-> revenue
+      (assoc* :report-template
+              (get-in @config [:invoice :report :template]))
       (assoc* :latex-template
-              (get-in @config [:templates :latex :invoice]))
+              (get-in @config [:invoice :latex :template]))
       (assoc* :ledger-template
               (get-in @config [:templates :ledger :revenue]))))
+
+(defn add-latex-content [revenue]
+  (->> revenue
+       templating/render-latex
+       (assoc* revenue :latex-content)))
+
+(defn add-latex-directory [revenue]
+  (let [directory (get-in @config [:invoice :latex :directory])]
+    (->> (templating/template directory revenue)
+         (assoc* revenue :latex-directory))))
+
+(defn add-latex-filename [revenue]
+  (let [filename (get-in @config [:invoice :latex :filename])]
+    (->> (templating/template filename revenue)
+         (assoc* revenue :latex-filename))))
+
+;; TODO refactor everything so that latex has its own submap wuth
+;; content, path etc. so we can have a generic write! function which
+;; takes a revenue and a key to the submap, see commented function
+;; below.
+(defn write-latex! [{directory :latex-directory
+                     filename :latex-filename
+                     content :latex-content
+                     :as revenue}]
+  ;; TODO use some path join here
+  (-> (str directory "/" filename)
+      (util/spit content))
+  revenue)
+
+;; (defn write! [event format]
+;;   (->> [:path :content]
+;;        (map (format event))
+;;        (apply util/spit)))
+
+(defn add-pdflatex-cmd [{directory :latex-directory
+                         filename :latex-filename
+                         :as revenue}]
+  (->> (str "(cd " directory " && pdflatex " filename ")")
+       (assoc* revenue :pdflatex-cmd)))
+
+(defn run-pdflatex! [{cmd :pdflatex-cmd
+                      :as revenue}]
+  (util/sh cmd)
+  revenue)
 
 (defmethod transform :revenue [event]
   (-> event
