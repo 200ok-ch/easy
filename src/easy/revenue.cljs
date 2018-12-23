@@ -294,6 +294,15 @@
   (util/sh cmd)
   revenue)
 
+(defn transform-latex! [revenue]
+  (-> revenue
+      add-latex-content
+      add-latex-directory
+      add-latex-filename
+      write-latex!
+      add-pdflatex-cmd
+      run-pdflatex!))
+
 (defmethod transform :revenue [event]
   (-> event
       (common/validate! ::event)

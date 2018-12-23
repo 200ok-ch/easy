@@ -35,15 +35,9 @@
        (map transform)
        (filter #(= (:invoice-no %) no))
        first
-       revenue/add-latex-content
-       revenue/add-latex-directory
-       revenue/add-latex-filename
-       revenue/write-latex!
-       revenue/add-pdflatex-cmd
-       revenue/run-pdflatex!
-       ;; TODO templating/render-report
-       ;;println
-       ))
+       revenue/transform-latex!
+       templating/render-report
+       println))
 
 (defn transform! [source & args]
   (->> source
