@@ -1,3 +1,4 @@
+;; TODO `config` should probably instead be named `state` or `data`
 (ns easy.config
   (:require [easy.util :as util]))
 

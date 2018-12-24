@@ -22,9 +22,9 @@
 
 (s/def ::event (s/keys :req-un [::type
                                 ::date
-                                ::amount
-                                ::beneficiary]
-                       :opt-un [::description]))
+                                ::amount]
+                       :opt-un [::description
+                                ::beneficiary]))
 
 ;; ------------------------------------------------------------
 ;; defaults

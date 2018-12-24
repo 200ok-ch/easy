@@ -57,3 +57,9 @@ Just run a transform to see the transformed events, which is handy for
 writing templates:
 
 =easy transform example.yml=
+
+** Notes
+
+#+BEGIN_SRC sh
+pip install yq
+#+END_SRC

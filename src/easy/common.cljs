@@ -12,8 +12,14 @@
 (def match-template (partial re-matches #".*\.hbs$"))
 
 ;; required
-(s/def ::type #{"revenue" "expense"})
-(s/def ::date util/date?)
+(s/def ::type #{"revenue"
+                "expense"
+                "opening"
+                "refund"
+                "reconciliation"})
+
+(s/def ::date (s/or :date util/date?
+                    :iso-string (s/and string? match-iso-date)))
 
 (s/def ::event (s/keys :req-un [::type
                                 ::date]))
@@ -22,6 +28,20 @@
 
 ;; ------------------------------------------------------------
 ;; transformer
+
+(defn harmonize-date-field [field event]
+  (if-let [date (field event)]
+    (if (string? date)
+      ;; NOTE don't use this, this does not return an instance of Date
+      ;; (assoc event field (time/parse util/iso-formatter date))
+      (assoc event field (js/Date. date))
+      event)
+    event))
+
+(defn harmonize [event]
+  (->> event
+       (harmonize-date-field :date)
+       (harmonize-date-field :settled)))
 
 (defn validate!
   "Same as `util/validate!`, but with arguments swapped."

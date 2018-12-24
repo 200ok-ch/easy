@@ -1,3 +1,4 @@
 {:deps
  {com.andrewmcveigh/cljs-time {:mvn/version "0.5.2"}
-  basil {:mvn/version "0.4.1"}}}
+  basil {:mvn/version "0.4.1"}
+  org.clojure/tools.cli {:mvn/version "0.4.1"}}}
