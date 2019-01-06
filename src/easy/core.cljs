@@ -8,9 +8,10 @@
             [easy.transform :refer [transform]]
             [easy.revenue :as revenue]
             easy.expense
-            ;; easy.refund
-            ;; easy.opening
-            ;; easy.reconciliation
+            easy.refund
+            easy.opening
+            easy.reconciliation
+            easy.salary
             [clojure.tools.cli :refer [parse-opts]]
             [cljs.pprint :refer [pprint]]
             [cljs.spec.alpha :as s]

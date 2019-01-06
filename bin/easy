@@ -4,4 +4,6 @@ BASEDIR=$(dirname "$0")/..
 KLASSPATH=$(cd "$BASEDIR" || exit 1; clj -Spath)
 export NODE_PATH=$BASEDIR/node_modules
 
+# echo "Starting lumo..."
+
 exec lumo -c "${BASEDIR}/src:${KLASSPATH}" -m easy.core $@

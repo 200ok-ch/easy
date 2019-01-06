@@ -16,9 +16,15 @@
   x)
 
 (defn slurp [path]
-  (.readFileSync fs path "utf8"))
+  {:pre [(string? path)]}
+  (try
+    (.readFileSync fs path "utf8")
+    (catch :default e
+      (println "ERROR: Cannot read file " path " due to exception " e))))
 
 (defn spit [path content]
+  {:pre [(string? path)
+         (string? content)]}
   (.writeFileSync fs path content))
 
 (defn parse-yaml [string]
