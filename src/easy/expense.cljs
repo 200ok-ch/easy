@@ -12,7 +12,8 @@
 (s/def ::type #{"expense"})
 (s/def ::date util/date?)
 (s/def ::amount float?)
-(s/def ::beneficiary string?)
+(s/def ::category string?)
+(s/def ::account string?)
 
 ;; optional
 (s/def ::description string?)
@@ -22,9 +23,10 @@
 
 (s/def ::event (s/keys :req-un [::type
                                 ::date
-                                ::amount]
-                       :opt-un [::description
-                                ::beneficiary]))
+                                ::amount
+                                ::category
+                                ::account]
+                       :opt-un [::description]))
 
 ;; ------------------------------------------------------------
 ;; defaults
