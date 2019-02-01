@@ -8,5 +8,7 @@
 (defmethod transform :default [event]
   (println (str "WARNING: No method in multimethod "
                 "'easy.transform/transform' for dispatch value: "
-                (-> event :type keyword)))
+                (-> event :type keyword)
+                ", in event "
+                (prn-str event)))
   event)
