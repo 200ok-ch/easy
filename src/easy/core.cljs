@@ -7,6 +7,7 @@
             [easy.templating :as templating]
             [easy.transform :refer [transform]]
             [easy.revenue :as revenue]
+            [easy.overview :as overview]
             easy.expense
             easy.refund
             easy.opening
@@ -60,6 +61,15 @@
   (->> events
        (map transform)))
 
+(defn overview!
+  "Renders an overview."
+  [events options]
+  (->> events
+       (map transform)
+       overview/crunch-numbers
+       templating/render-overview
+       println))
+
 ;; ------------------------------------------------------------
 ;; main
 
@@ -92,6 +102,7 @@
       :invoice (invoice! events options)
       :transform (transform! events options)
       :validate (validate! events options)
+      :overview (overview! events options)
       ;; else
       (do
         (println (str "Unknown command: " command))

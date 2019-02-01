@@ -3,6 +3,8 @@
             ["handlebars-helpers" :as hbsh]
             [easy.util :as util]))
 
+;; TODO use https://github.com/leapfrogtechnology/just-handlebars-helpers because it has sprintf
+
 ;; ------------------------------------------------------------
 ;; templating
 
@@ -28,3 +30,6 @@
 
 (defn template [source values]
   ((hbs/compile source) (clj->js values)))
+
+(defn render-overview [data]
+  (apply-template :overview-template data))
