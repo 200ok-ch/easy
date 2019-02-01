@@ -63,3 +63,8 @@ writing templates:
 #+BEGIN_SRC sh
 pip install yq
 #+END_SRC
+
+** TODOs
+
+*** write subcommand to generate a reconciliation event so that Aktiva::Joint is 0
+*** write subcommand to generate entries that share profit

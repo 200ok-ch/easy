@@ -14,7 +14,7 @@
 (s/def ::type #{"reconciliation"})
 (s/def ::date util/date?)
 (s/def ::amount float?)
-(s/def ::beneficiary string?)
+(s/def ::account string?)
 
 ;; optional
 (s/def ::description string?)
@@ -24,9 +24,9 @@
 
 (s/def ::event (s/keys :req-un [::type
                                 ::date
-                                ::amount]
-                       :opt-un [::description
-                                ::beneficiary]))
+                                ::amount
+                                ::account]
+                       :opt-un [::description]))
 
 ;; ------------------------------------------------------------
 ;; defaults
