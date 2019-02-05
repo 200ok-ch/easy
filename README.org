@@ -61,6 +61,7 @@ writing templates:
 ** Notes
 
 #+BEGIN_SRC sh
+sudo apt install python-pip
 pip install yq
 #+END_SRC
 
