@@ -35,6 +35,7 @@
   "Generates an invoice PDF and prints a report."
   [events options]
   (->> events
+       ;; TODO filter for :type "revenue"
        (map revenue/add-invoice-no)
        (filter #(= (:invoice-no %) (:no options)))
        first

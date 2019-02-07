@@ -86,6 +86,5 @@
       merge-defaults
       read-timesheet
       prepare-timesheet
-      util/spy
       add-hours
       add-amount))
