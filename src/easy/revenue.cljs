@@ -250,6 +250,10 @@
       (assoc* :ledger-template
               (get-in @config [:templates :ledger :revenue]))))
 
+(defn order-items-by-amount [revenue]
+  (merge revenue
+         {:items (reverse (sort-by :amount (:items revenue)))}))
+
 (defn add-latex-content [revenue]
   (->> revenue
        templating/render-latex
@@ -296,6 +300,7 @@
 
 (defn transform-latex! [revenue]
   (-> revenue
+      order-items-by-amount
       add-latex-content
       add-latex-directory
       add-latex-filename
