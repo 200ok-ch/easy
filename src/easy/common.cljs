@@ -9,7 +9,7 @@
 ;; spec
 
 (def match-iso-date (partial re-matches #"^\d{4}-\d\d-\d\d$"))
-(def match-template (partial re-matches #".*\.hbs$"))
+(def match-template (partial re-matches #".*\.hbs"))
 
 ;; TODO introduce an event "settle"
 ;; required
