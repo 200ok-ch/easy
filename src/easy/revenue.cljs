@@ -157,17 +157,8 @@
        util/round-currency
        (assoc* revenue :tax-win)))
 
-;; TODO move to revenue.item
-(defn add-item-amount [item]
-  (->> (map item [:rate :hours])
-       (apply *)
-       ;; TODO calculate and subtract discount
-       util/round-currency
-       (assoc* item :amount)))
-
-;; TODO maybe move to revenue.item
-(defn add-items-amount [revenue]
-  (update revenue :items #(map add-item-amount %)))
+(defn transform-items [revenue]
+  (update revenue :items (partial map item/transform)))
 
 (defn add-net-total [revenue]
   (->> revenue
@@ -306,14 +297,15 @@
       add-latex-filename
       write-latex!
       add-pdflatex-cmd
-      run-pdflatex!))
+      run-pdflatex!
+      ;; TODO run xdg-open on the pdf file
+      ))
 
 (defmethod transform :revenue [event]
   (-> event
       (common/validate! ::event)
       merge-defaults
       lookup-customer
-      ;; TODO item/merge-defaults
       common/add-iso-date
       add-iso-settled
       add-period
@@ -321,17 +313,12 @@
       add-tax-rate-in
       add-tax-rate-out
       add-tax-period
-      ;; TODO read-timesheets
-      ;; TODO add-items-hours
-      add-items-amount
+      transform-items
       add-net-total
       add-tax-in
       add-gross-total
       add-tax-out
       add-tax-win
       add-invoice-no
-      ;; TODO add-invoice-settings, e.g. phil, alain, neutral
-      ;; TODO add-customer-number, e.g. 2017-4
-      ;; TODO add-customer-address
       add-templates
       (common/validate! ::event)))

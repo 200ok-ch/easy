@@ -1,12 +1,21 @@
 (ns easy.util
   (:require [cljs.spec.alpha :as s]
             [clojure.pprint :refer [pprint]]
-            [clojure.string :refer [join]]
+            [clojure.string :refer [join replace]]
             ["fs" :as fs]
             ["js-yaml" :as yaml]
             ["sync-exec" :as exec]
             ["sprintf-js" :refer [sprintf]]
             [cljs-time.format :as time]))
+
+(defn sanitize-latex [text]
+  (-> text
+      (replace "_" " ") ;; FIXME this is a hack
+      (replace "#" "\\#")
+      (replace "&" "\\&")))
+
+(defn warn [msg]
+  (.error js/console msg))
 
 (defn sh [& args]
   (exec (join " " args)))
@@ -50,10 +59,14 @@
 
 (defn assoc*
   "Like `assoc` but adds `key` only if hashmap does not already have
-  `key`. Also takes only one `key` and `value`."
+  `key` (preset). Warns if preset and `value` differ. (Also takes only
+  one `key` and `value`.)"
   [hashmap key value]
-  (if (contains? hashmap key)
-    hashmap
+  (if-let [preset (key hashmap)]
+    (do
+      (if (not= preset value)
+        (warn (str "Overwriting " key " " value " with diffing preset " preset)))
+      hashmap)
     (assoc hashmap key value)))
 
 (defn validate!
