@@ -11,11 +11,15 @@
 
 (s/def ::timesheet (s/and string? #(re-matches #"\.csv$" %)))
 
+;; TODO how do I spec: either hours or timesheet has to be present?
+
 (s/def ::item (s/keys :req-un [::rate
-                               ::hours
                                ::beneficiary]
-                      :opt-un [::timesheet
-                               ::discount]))
+                      :opt-un [::hours
+                               ::timesheet
+                               ::timesheet-data
+                               ::discount
+                               ::amount]))
 
 (def defaults
   {:discount 0})
