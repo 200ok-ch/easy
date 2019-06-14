@@ -10,6 +10,9 @@
 
 (hbsh) ;; attaches the handlebars-helpers
 
+(.registerHelper hbs "uuid", #(random-uuid))
+
+
 ;; TODO don't read and parse the same template over and over again
 (defn- apply-template [template-key event]
   ;; (println (:type event))
