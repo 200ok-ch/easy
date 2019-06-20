@@ -18,7 +18,8 @@
                 "opening"
                 "refund"
                 "reconciliation"
-                "salary"})
+                "salary"
+                "outlay"})
 
 (s/def ::date (s/or :date util/date?
                     :iso-string (s/and string? match-iso-date)))

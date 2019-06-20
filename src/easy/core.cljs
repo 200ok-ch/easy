@@ -13,6 +13,7 @@
             easy.opening
             easy.reconciliation
             easy.salary
+            easy.outlay
             [clojure.tools.cli :refer [parse-opts]]
             [cljs.pprint :refer [pprint]]
             [cljs.spec.alpha :as s]
