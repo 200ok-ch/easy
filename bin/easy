@@ -11,6 +11,4 @@ fi
 KLASSPATH=$(cat $KLASSPATHFILE)
 export NODE_PATH=$BASEDIR/node_modules
 
-# echo "Starting lumo..."
-
-exec lumo -c "$KLASSPATH" -m easy.core $@
+exec lumo -K -c "$KLASSPATH" -m easy.core $@

@@ -8,7 +8,7 @@
 (s/def ::beneficiary string?)
 (s/def ::discount float?)
 (s/def ::amount float?)
-(s/def ::timesheet (s/and string? #(re-matches #".*\.csv" %)))
+(s/def ::timesheet (s/and string? #(.endsWith % ".csv")))
 
 ;; TODO Write a spec for timesheet-data. It can look like this, e.g.
 ;;
