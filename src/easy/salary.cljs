@@ -36,7 +36,7 @@
 ;; ------------------------------------------------------------
 ;; transformer
 
-(defmethod transform :salary [event]
+(defmethod transform :salary [_ event]
   (-> event
       (common/validate! ::event)
       common/add-iso-date

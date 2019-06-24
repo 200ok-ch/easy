@@ -310,7 +310,7 @@
       ;; TODO run xdg-open on the pdf file
       ))
 
-(defmethod transform :settlement [event]
+(defmethod transform :settlement [_ event]
   (-> event
       (common/validate! ::event)
       merge-defaults

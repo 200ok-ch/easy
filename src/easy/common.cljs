@@ -5,32 +5,39 @@
             [cljs-time.core :as cljs-time]
             [cljs-time.format :as time]))
 
-;; ------------------------------------------------------------
+
 ;; spec
 
+
 (def match-iso-date (partial re-matches #"^\d{4}-\d\d-\d\d$"))
+
+
 (def match-template (partial re-matches #".*\.hbs"))
 
-;; required
-(s/def ::type #{"revenue"
-                "settlement"
-                "expense"
-                "opening"
-                "refund"
-                "reconciliation"
-                "salary"
-                "outlay"})
+
+(s/def ::type #{"opening"        ;; Eröffnungsbilanz
+                "invoice"        ;; Rechnung wurde gestellt
+                "settlement"     ;; Rechnung wurde beglichen
+                "expense"        ;; Ausgabe
+                "refund"         ;; Rückerstattung
+                "reconciliation" ;; Ausgleichsbuchung
+                "salary"         ;; Gehalt
+                "outlay"})       ;; Spesenabrechnung
+
 
 (s/def ::date (s/or :date util/date?
                     :iso-string (s/and string? match-iso-date)))
 
+
 (s/def ::event (s/keys :req-un [::type
                                 ::date]))
 
+
 (s/def ::events (s/coll-of ::event))
 
-;; ------------------------------------------------------------
+
 ;; transformer
+
 
 (defn harmonize-date-field [field event]
   (if-let [date (field event)]
@@ -41,15 +48,18 @@
       event)
     event))
 
+
 (defn harmonize [event]
   (->> event
        (harmonize-date-field :date)
        (harmonize-date-field :settled)))
 
+
 (defn validate!
   "Same as `util/validate!`, but with arguments swapped."
   [x spec]
   (util/validate! spec x))
+
 
 (defn add-iso-date [event]
   (->> event

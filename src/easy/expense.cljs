@@ -5,8 +5,9 @@
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]))
 
-;; ------------------------------------------------------------
+
 ;; spec
+
 
 ;; required
 (s/def ::type #{"expense"})
@@ -15,11 +16,13 @@
 (s/def ::category string?)
 (s/def ::account string?)
 
+
 ;; optional
 (s/def ::description string?)
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::ledger-state #{"*"})
 (s/def ::ledger-template (s/and string? common/match-template))
+
 
 (s/def ::event (s/keys :req-un [::type
                                 ::date
@@ -28,19 +31,22 @@
                                 ::account]
                        :opt-un [::description]))
 
-;; ------------------------------------------------------------
+
 ;; defaults
+
 
 (def defaults
   {})
 
+
 (def merge-defaults
   (partial merge defaults))
 
-;; ------------------------------------------------------------
+
 ;; transformer
 
-(defmethod transform :expense [event]
+
+(defmethod transform :expense [_ event]
   (-> event
       (common/validate! ::event)
       common/add-iso-date
