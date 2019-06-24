@@ -14,6 +14,7 @@
             easy.reconciliation
             easy.salary
             easy.outlay
+            easy.settlement
             [clojure.tools.cli :refer [parse-opts]]
             [cljs.pprint :refer [pprint]]
             [cljs.spec.alpha :as s]

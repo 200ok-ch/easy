@@ -23,5 +23,6 @@
   ;;(println (top-creditors events))
   {:overview-template (get-in @config [:templates :output :overview])
    :unsettled (filter unsettled-invoice events)
+   :end-of-year-receivables (filter :deferral events)
    ;;:top-creditors (top-creditors events)
    })

@@ -1,11 +1,11 @@
-(ns easy.revenue
+(ns easy.settlement
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.templating :as templating]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]
-            [easy.revenue.item :as item]
+            [easy.settlement.item :as item]
             [easy.customers :as customers]
             [clojure.string :refer [join replace split]]
             [cljs-time.core :as cljs-time]
@@ -18,7 +18,7 @@
 (def match-period (partial re-matches #"^\d{4}-(H|Q)\d$"))
 
 ;; required
-(s/def ::type #{"revenue"})
+(s/def ::type #{"settlement"})
 (s/def ::date util/date?)
 (s/def ::customer-id pos-int?)
 (s/def ::number pos-int?) ;; sequence
@@ -57,6 +57,7 @@
                                 ::customer-id
                                 ::number
                                 ::version
+                                ::amount
                                 ::items]
                        :opt-un [::customers/customer
                                 ::settled
@@ -114,15 +115,15 @@
     event))
 
 ;; TODO make the tax rate configurable via config
-(defn tax-rate-in [revenue]
-  (if (< (:date revenue)
+(defn tax-rate-in [settlement]
+  (if (< (:date settlement)
          (time/parse "2018-01-01"))
     0.08
     0.077))
 
 ;; TODO make the tax rate configurable via config
-(defn tax-rate-out [revenue]
-  (let [date (:date revenue)]
+(defn tax-rate-out [settlement]
+  (let [date (:date settlement)]
     (cond
       ;; saldo pre 2018
       (< date (time/parse "2018-01-01")) 0.061
@@ -131,60 +132,60 @@
       ;; saldo from 2018
       :else 0.059)))
 
-(defn add-tax-rate-in [revenue]
-  (->> (tax-rate-in revenue)
-       (assoc* revenue :tax-rate-in)))
+(defn add-tax-rate-in [settlement]
+  (->> (tax-rate-in settlement)
+       (assoc* settlement :tax-rate-in)))
 
-(defn add-tax-rate-out [revenue]
-  (->> (tax-rate-out revenue)
-       (assoc* revenue :tax-rate-out)))
+(defn add-tax-rate-out [settlement]
+  (->> (tax-rate-out settlement)
+       (assoc* settlement :tax-rate-out)))
 
-(defn add-tax-in [revenue]
-  (->> (:net-total revenue)
-       (* (:tax-rate-in revenue))
+(defn add-tax-in [settlement]
+  (->> (:net-total settlement)
+       (* (:tax-rate-in settlement))
        util/round-currency
-       (assoc* revenue :tax-in)))
+       (assoc* settlement :tax-in)))
 
-(defn add-tax-out [revenue]
-  (->> (:gross-total revenue)
-       (* (:tax-rate-out revenue))
+(defn add-tax-out [settlement]
+  (->> (:gross-total settlement)
+       (* (:tax-rate-out settlement))
        util/round-currency
-       (assoc* revenue :tax-out)))
+       (assoc* settlement :tax-out)))
 
-(defn add-tax-win [revenue]
-  (->> (:tax-out revenue)
-       (- (:tax-in revenue))
+(defn add-tax-win [settlement]
+  (->> (:tax-out settlement)
+       (- (:tax-in settlement))
        util/round-currency
-       (assoc* revenue :tax-win)))
+       (assoc* settlement :tax-win)))
 
-(defn transform-items [revenue]
-  (update revenue :items (partial map item/transform)))
+(defn transform-items [settlement]
+  (update settlement :items (partial map item/transform)))
 
-(defn add-net-total [revenue]
-  (->> revenue
+(defn add-net-total [settlement]
+  (->> settlement
        :items
        (map :amount)
        (reduce +)
        ;; TODO calculate and subtract discount
        util/round-currency
-       (assoc* revenue :net-total)))
+       (assoc* settlement :net-total)))
 
-(defn add-gross-total [revenue]
-  (->> (+ (:net-total revenue)
-          (:tax-in revenue))
+(defn add-gross-total [settlement]
+  (->> (+ (:net-total settlement)
+          (:tax-in settlement))
        util/round-currency
-       (assoc* revenue :gross-total)))
+       (assoc* settlement :gross-total)))
 
-(defn add-invoice-no [revenue]
+(defn add-invoice-no [settlement]
   (->> [:customer-id :number :version]
-       (map revenue)
+       (map settlement)
        (join ".")
-       (assoc* revenue :invoice-no)))
+       (assoc* settlement :invoice-no)))
 
 ;; TODO rewrite in a way that it does not need to be adjusted for
 ;; every year
-(defn add-tax-period [revenue]
-  (->> (if-let [date (:settled revenue)]
+(defn add-tax-period [settlement]
+  (->> (if-let [date (:settled settlement)]
          (cond
            (and (>= date (time/parse "2018-01-01"))
                 (<= date (time/parse "2018-05-31")))
@@ -200,19 +201,19 @@
            "2019-H2"
            :else "Unknown")
          "Unsettled")
-       (assoc* revenue :tax-period)))
+       (assoc* settlement :tax-period)))
 
 (defn add-ledger-state
   "Sets `:ledger-state` to either `*` or `!`, depending on the presence
   of `:settled`"
-  [revenue]
-  (->> (if (:settled revenue) "*" "!")
-       (assoc* revenue :ledger-state)))
+  [settlement]
+  (->> (if (:settled settlement) "*" "!")
+       (assoc* settlement :ledger-state)))
 
 ;; TODO rewrite in a way that it does not need to be adjusted for
 ;; every year
-(defn add-period [revenue]
-  (->> (let [date (:date revenue)]
+(defn add-period [settlement]
+  (->> (let [date (:date settlement)]
          (cond
            (and (>= date (time/parse "2017-06-01"))
                 (<= date (time/parse "2017-12-31")))
@@ -230,58 +231,56 @@
                 (<= date (time/parse "2019-12-31")))
            "2019-H2"
            :else "Unknown"))
-       (assoc* revenue :period)))
+       (assoc* settlement :period)))
 
-(defn add-templates [revenue]
-  (-> revenue
+(defn add-templates [settlement]
+  (-> settlement
       (assoc* :report-template
               (get-in @config [:invoice :report :template]))
       (assoc* :latex-template
               (get-in @config [:invoice :latex :template]))
       (assoc* :ledger-template
-              (if (:deferral revenue)
-                (get-in @config [:templates :ledger :revenue-unsettled])
-                (get-in @config [:templates :ledger :revenue])))))
+                (get-in @config [:templates :ledger :settlement]))))
 
-(defn order-items-by-amount [revenue]
-  (merge revenue
-         {:items (reverse (sort-by :amount (:items revenue)))}))
+(defn order-items-by-amount [settlement]
+  (merge settlement
+         {:items (reverse (sort-by :amount (:items settlement)))}))
 
-(defn add-latex-content [revenue]
-  (->> revenue
+(defn add-latex-content [settlement]
+  (->> settlement
        templating/render-latex
-       (assoc* revenue :latex-content)))
+       (assoc* settlement :latex-content)))
 
-(defn add-latex-directory [revenue]
+(defn add-latex-directory [settlement]
   (let [directory (get-in @config [:invoice :latex :directory])]
-    (->> (templating/template directory revenue)
-         (assoc* revenue :latex-directory))))
+    (->> (templating/template directory settlement)
+         (assoc* settlement :latex-directory))))
 
-(defn add-latex-filename [revenue]
+(defn add-latex-filename [settlement]
   (let [filename (get-in @config [:invoice :latex :filename])]
-    (->> (templating/template filename revenue)
-         (assoc* revenue :latex-filename))))
+    (->> (templating/template filename settlement)
+         (assoc* settlement :latex-filename))))
 
-(defn add-deferral [revenue]
-  (let [booking-year (-> revenue :date .getFullYear)
-        settled-date (-> revenue :settled)
+(defn add-deferral [settlement]
+  (let [booking-year (-> settlement :date .getFullYear)
+        settled-date (-> settlement :settled)
         settled-year (if settled-date
                        (-> settled-date .getFullYear)
                        (inc booking-year))]
-    (assoc* revenue :deferral (< booking-year settled-year))))
+    (assoc* settlement :deferral (< booking-year settled-year))))
 
 ;; TODO refactor everything so that latex has its own submap wuth
 ;; content, path etc. so we can have a generic write! function which
-;; takes a revenue and a key to the submap, see commented function
+;; takes a settlement and a key to the submap, see commented function
 ;; below.
 (defn write-latex! [{directory :latex-directory
                      filename :latex-filename
                      content :latex-content
-                     :as revenue}]
+                     :as settlement}]
   ;; TODO use some path join here
   (-> (str directory "/" filename)
       (util/spit content))
-  revenue)
+  settlement)
 
 ;; (defn write! [event format]
 ;;   (->> [:path :content]
@@ -290,17 +289,17 @@
 
 (defn add-pdflatex-cmd [{directory :latex-directory
                          filename :latex-filename
-                         :as revenue}]
+                         :as settlement}]
   (->> (str "(cd " directory " && pdflatex " filename ")")
-       (assoc* revenue :pdflatex-cmd)))
+       (assoc* settlement :pdflatex-cmd)))
 
 (defn run-pdflatex! [{cmd :pdflatex-cmd
-                      :as revenue}]
+                      :as settlement}]
   (util/sh cmd)
-  revenue)
+  settlement)
 
-(defn transform-latex! [revenue]
-  (-> revenue
+(defn transform-latex! [settlement]
+  (-> settlement
       order-items-by-amount
       add-latex-content
       add-latex-directory
@@ -311,7 +310,7 @@
       ;; TODO run xdg-open on the pdf file
       ))
 
-(defmethod transform :revenue [event]
+(defmethod transform :settlement [event]
   (-> event
       (common/validate! ::event)
       merge-defaults
