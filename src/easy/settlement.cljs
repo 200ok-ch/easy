@@ -53,8 +53,7 @@
 (s/def ::event (s/and
                 (s/keys :req-un [::type
                                  ::date
-                                 ::amount
-                                 ::items]
+                                 ::amount]
                         :opt-un [::customers/customer
                                  ::iso-date
                                  ::tax-rate-in
@@ -109,9 +108,6 @@
   (reduce (fn [acc [key val]] (assoc* acc key val)) a b))
 
 
-(defn spy [x] (prn x) x)
-
-
 (defn add-invoice-no-details [{:keys [invoice-no] :as evt}]
   (if invoice-no
     (->> (split invoice-no #"\.")
@@ -129,6 +125,7 @@
        (map unify-invoice-no)
        (filter #(= invoice-no (:invoice-no %)))
        first
+       (transform nil)
        (assoc* evt :invoice)))
 
 
@@ -165,7 +162,7 @@
        (assoc* evt :tax-in)))
 
 (defn add-tax-out [evt]
-  (->> (:amount evt)
+  (->> (:net-total evt)
        (* (:tax-rate-out evt))
        util/round-currency
        (assoc* evt :tax-out)))
@@ -183,9 +180,7 @@
 (defn add-net-total
   "Calculates the net-total based on the gross-total (here `amount`)."
   [evt]
-  (->> evt
-       :amount
-       (/ tax-rate-in)
+  (->> (/ (:amount evt) (inc (:tax-rate-in evt)))
        util/round-currency
        (assoc* evt :net-total)))
 
@@ -193,8 +188,10 @@
 
 ;; TODO rewrite in a way that it does not need to be adjusted for
 ;; every year
-(defn add-tax-period [evt]
-  (->> (let [date (:date evt)]
+(defn add-tax-period
+  "The tax-period is when the vat is due."
+  [evt]
+  (->> (let [date (-> evt :date)]
          (cond
            (and (>= date (time/parse "2017-06-01"))
                 (<= date (time/parse "2017-12-31")))
@@ -284,6 +281,23 @@
       ;; TODO run xdg-open on the pdf file
       ))
 
+(defn add-coverage [evt]
+  (let [settlement-total (:net-total evt)
+        invoice-total (->> evt :invoice :net-total)
+        coverage (/ settlement-total invoice-total)]
+    (if (or (< coverage 0.98)
+            (> coverage 1.02))
+      (util/warn (str "Coverage " coverage " on settlement for " (:invoice-no evt))))
+    (assoc* evt :coverage coverage)))
+
+
+(defn add-distribution [evt]
+  (let [invoice (->> evt :invoice (transform nil))
+        total (-> invoice :amount)]
+    (->> invoice
+         :items
+         (map (fn [i] (update i :amount #(util/round-currency (* % (:coverage evt))))))
+         (assoc* evt :distribution))))
 
 
 (defmethod transform :settlement [context event]
@@ -299,6 +313,8 @@
       add-tax-rate-out
       transform-items
       add-net-total
+      add-coverage
+      add-distribution
       add-tax-in
       add-tax-out
       add-tax-win
