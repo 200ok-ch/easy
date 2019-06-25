@@ -40,7 +40,7 @@
 ;; ------------------------------------------------------------
 ;; transformer
 
-(defmethod transform :refund [event]
+(defmethod transform :refund [_ event]
   (-> event
       (common/validate! ::event)
       common/add-iso-date

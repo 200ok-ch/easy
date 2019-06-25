@@ -3,11 +3,10 @@
   (:require [easy.util :as util]
             [easy.config :as config :refer [config]]
             [easy.customers :as customers]
-            [easy.common :as common]
             [easy.templating :as templating]
             [easy.transform :refer [transform]]
-            [easy.revenue :as revenue]
             [easy.overview :as overview]
+            [easy.invoice :as invoice]
             easy.expense
             easy.refund
             easy.opening
@@ -15,6 +14,7 @@
             easy.salary
             easy.outlay
             easy.settlement
+            [easy.common :as common]
             [clojure.tools.cli :refer [parse-opts]]
             [cljs.pprint :refer [pprint]]
             [cljs.spec.alpha :as s]
@@ -28,7 +28,8 @@
   representation."
   [events options]
   (->> events
-       (map transform)
+       (map (partial transform events))
+       (filter #(.startsWith (:iso-date %) (:year options)))
        (map templating/render-ledger)
        (join "\n")
        println))
@@ -37,12 +38,12 @@
   "Generates an invoice PDF and prints a report."
   [events options]
   (->> events
-       (filter #(= "revenue" (:type %)))
-       (map revenue/add-invoice-no)
+       (filter #(= "invoice" (:type %)))
+       (map invoice/add-invoice-no)
        (filter #(= (:invoice-no %) (:no options)))
        first
-       transform
-       revenue/transform-latex!
+       (transform events)
+       invoice/transform-latex!
        templating/render-report
        println))
 
@@ -50,7 +51,7 @@
   "Transforms all input events pretty prints the result and exits."
   [events options]
   (->> events
-       (map transform)
+       (map (partial transform events))
        pprint))
 
 (defn noop!
@@ -62,13 +63,13 @@
   "Validates all input events and exits."
   [events options]
   (->> events
-       (map transform)))
+       (map (partial transform events))))
 
 (defn overview!
   "Renders an overview."
   [events options]
   (->> events
-       (map transform)
+       (map (partial transform events))
        overview/crunch-numbers
        templating/render-overview
        println))
@@ -115,6 +116,7 @@
 
 (def cli-options
   [["-i" "--input INPUT" "Input file"]
+   ["-y" "--year NUMBER" "Year"]
    ["-n" "--no NUMBER" "Invoice No"]])
 
 ;; TODO get rid of the warning by using reader conditionals in

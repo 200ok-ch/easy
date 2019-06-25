@@ -1,4 +1,4 @@
-(ns easy.revenue.item
+(ns easy.invoice.item
   (:require [cljs.spec.alpha :as s]
             [testdouble.cljs.csv :as csv]
             [easy.util :as util :refer [assoc*]]))

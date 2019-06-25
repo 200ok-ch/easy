@@ -37,7 +37,7 @@
 ;; ------------------------------------------------------------
 ;; transformer
 
-(defmethod transform :opening [event]
+(defmethod transform :opening [_ event]
   (-> event
       (common/validate! ::event)
       common/add-iso-date

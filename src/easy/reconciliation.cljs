@@ -40,7 +40,7 @@
 ;; ------------------------------------------------------------
 ;; transformer
 
-(defmethod transform :reconciliation [event]
+(defmethod transform :reconciliation [_ event]
   (-> event
       (common/validate! ::event)
       common/add-iso-date

@@ -1,11 +1,15 @@
 (ns easy.transform
-  "Transform has to has its own namespace to avoid cyclic dependencies.")
+  "The transform function is no only a multimethod but also
+  overloaded (i.e. has multiple arities). Transform has to has its own
+  namespace to avoid cyclic dependencies.")
+
 
 (defmulti transform
   "Events will be transformed based on their type."
-  (comp keyword :type))
+  (fn [_ e] (-> e :type keyword)))
 
-(defmethod transform :default [event]
+
+(defmethod transform :default [_ event]
   (println (str "WARNING: No method in multimethod "
                 "'easy.transform/transform' for dispatch value: "
                 (-> event :type keyword)

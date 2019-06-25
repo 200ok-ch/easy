@@ -38,7 +38,7 @@
 ;; ------------------------------------------------------------
 ;; transformer
 
-(defmethod transform :outlay [event]
+(defmethod transform :outlay [_ event]
   (-> event
       (common/validate! ::event)
       common/add-iso-date

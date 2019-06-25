@@ -2,6 +2,7 @@
 (ns easy.config
   (:require [easy.util :as util]))
 
+
 (def default-config
   {:customers "customers.yml"
    :templates
@@ -16,7 +17,9 @@
     :report
     {:template "templates/report.txt.hbs"}}})
 
+
 (def config (atom default-config))
+
 
 (defn load! []
   ;; TODO check if file exists
