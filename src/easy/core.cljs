@@ -29,6 +29,7 @@
   [events options]
   (->> events
        (map (partial transform events))
+       (filter #(.startsWith (:iso-date %) (:year options)))
        (map templating/render-ledger)
        (join "\n")
        println))
@@ -115,6 +116,7 @@
 
 (def cli-options
   [["-i" "--input INPUT" "Input file"]
+   ["-y" "--year NUMBER" "Year"]
    ["-n" "--no NUMBER" "Invoice No"]])
 
 ;; TODO get rid of the warning by using reader conditionals in
