@@ -58,6 +58,58 @@ writing templates:
 
 =easy transform example.yml=
 
+** Semantics
+
+| type       | path        | modus     |
+|------------+-------------+-----------|
+| settlement | date        | required  |
+|            | amount      | required  |
+|            | invoice-no  | required¹ |
+|            | customer-id | required¹ |
+|            | number      | required¹ |
+|            | version     | required¹ |
+|            | description | optional  |
+|            | iso-date    | derived   |
+|            |             |           |
+
+This is pseudo-YAML with the description of the property in place of
+its value.
+
+#+BEGIN_SRC yaml
+  # Eröffnungsbilanz
+  - type: opening
+
+  # Rechnung wurde gestellt
+  - type: invoice
+
+  # Rechnung wurde beglichen
+  - type: "settlement"
+    date: >-
+      The date of the money transfer.
+    amount: >-
+      The amount of money that has been transfered. It is expected to be
+      equal or (if rounded) close to the gross-total of the
+      corresponding invoice.
+    invoice-no: >-
+      The number of the corresponding invoice, which is usually also
+      given on the transfer details.
+
+  # Ausgabe/Aufwand
+  - type: expense
+
+  # Rückerstattung
+  - type: refund
+
+  # Ausgleichsbuchung
+  - type: reconciliation
+
+  # Gehalt
+  - type: salary
+
+  # Spesenabrechnung
+  - type: outlay
+#+END_SRC
+
 ** Notes
 
 #+BEGIN_SRC sh
