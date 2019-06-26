@@ -2,6 +2,7 @@
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
+            [easy.common.invoice-no :as invoice-no]
             [easy.templating :as templating]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]
@@ -22,9 +23,6 @@
 ;; required
 (s/def ::type #{"invoice"})
 (s/def ::date util/date?)
-(s/def ::customer-id pos-int?)
-(s/def ::number pos-int?) ;; sequence
-(s/def ::version pos-int?)
 (s/def ::items (s/coll-of ::item/item))
 
 
@@ -40,7 +38,6 @@
 (s/def ::tax-win float?)
 (s/def ::net-total float?)
 (s/def ::gross-total float?)
-(s/def ::invoice-no (s/and string? match-invoice-no))
 (s/def ::tax-period (s/or :settled (s/and string? match-period)
                           :unsettled #{"Unsettled"}))
 (s/def ::period (s/or :settled (s/and string? match-period)
@@ -53,7 +50,8 @@
 (s/def ::latex-filename string?)
 (s/def ::pdflatex-cmd string?)
 
-(s/def ::event (s/keys :req-un [::type
+(s/def ::event (s/and
+                (s/keys :req-un [::type
                                 ::date
                                 ::customer-id
                                 ::number
@@ -71,7 +69,6 @@
                                 ::tax-win
                                 ::net-total
                                 ::gross-total
-                                ::invoice-no
                                 ::tax-period
                                 ::period
                                 ::ledger-state
@@ -80,8 +77,8 @@
                                 ::latex-content
                                 ::latex-directory
                                 ::latex-filename
-                                ::pdflatex-cmd]))
-
+                                ::pdflatex-cmd])
+                ::invoice-no/with))
 
 ;; defaults
 
@@ -325,6 +322,5 @@
       add-gross-total
       add-tax-out
       add-tax-win
-      add-invoice-no
       add-templates
       (common/validate! ::event)))

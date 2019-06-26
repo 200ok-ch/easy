@@ -2,6 +2,7 @@
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
+            [easy.common.invoice-no :as invoice-no]
             [easy.templating :as templating]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]
@@ -13,24 +14,12 @@
 
 ;; spec
 
-(def match-invoice-no (partial re-matches #"^\d+\.\d+\.\d+$"))
 (def match-period (partial re-matches #"^\d{4}-(H|Q)\d$"))
 
 ;; required
 (s/def ::type #{"settlement"})
 (s/def ::date util/date?)
 (s/def ::amount float?) ;; this should be equal to the invoice's gross-total
-
-(s/def ::customer-id pos-int?)
-(s/def ::number pos-int?) ;; sequence
-(s/def ::version pos-int?)
-
-(s/def ::invoice-no (s/and string? match-invoice-no))
-
-(s/def ::with-invoice-no (s/or :joined (s/keys :req-un [::invoice-no])
-                               :split (s/keys :req-un [::customer-id
-                                                       ::number
-                                                       ::version])))
 
 (s/def ::items (s/coll-of ::item/item))
 
@@ -70,7 +59,7 @@
                                  ::latex-directory
                                  ::latex-filename
                                  ::pdflatex-cmd])
-                ::with-invoice-no))
+                ::invoice-no/with))
 
 
 ;; defaults
@@ -97,32 +86,8 @@
        (assoc* evt :customer)))
 
 
-(defn add-invoice-no [evt]
-  (->> [:customer-id :number :version]
-       (map evt)
-       (join ".")
-       (assoc* evt :invoice-no)))
-
-
-(defn merge* [a b]
-  (reduce (fn [acc [key val]] (assoc* acc key val)) a b))
-
-
-(defn add-invoice-no-details [{:keys [invoice-no] :as evt}]
-  (if invoice-no
-    (->> (split invoice-no #"\.")
-         (map int)
-         (zipmap [:customer-id :number :version])
-         (merge* evt))
-    evt))
-
-(def unify-invoice-no
-  (comp add-invoice-no
-        add-invoice-no-details))
-
 (defn lookup-invoice [{:keys [invoice-no] :as evt} context]
   (->> context
-       (map unify-invoice-no)
        (filter #(= invoice-no (:invoice-no %)))
        first
        (transform nil)
@@ -304,7 +269,6 @@
   (-> event
       (common/validate! ::event)
       merge-defaults
-      unify-invoice-no
       lookup-customer
       (lookup-invoice context)
       common/add-iso-date
