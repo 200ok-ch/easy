@@ -114,6 +114,32 @@ its value.
   - type: outlay
 #+END_SRC
 
+** On Transform and Resolve and how EASY avoids black holes
+
+Easy uses a multimethod =transform= to transform events into a
+/usable/ form. /Usable/ meaning it has all the details calculated and
+associated data added to be used in a template.
+
+The transformation of a single event might happen within a =context=.
+The =context= is the set of all events within a processing run.
+(Technically the =context= is not a set, but a map, where the values
+are lists of events and the keys are their corresponding =type=. This
+is for convenience because in almost all cases you only want to have
+events of a single =type= when using the context to resolve associated
+events.)
+
+Associated data is added via resolve-fns. The resolve-fns use the
+context to lookup other events. As the context contains only "mildy"
+and not fully transformed events the resolve-fn will very likely have
+to transform the resolved event in order to make it usable. If this
+would mean that another resolve-fn is triggere this will likely
+trigger an endless recursion of resolves.
+
+To prevent this from happening you have to adhere to the following
+conventions: (A) Resolve functions that receive =nil= as the =context=
+should return the event untouched. (B) When calling =transform= from a
+resolve-fn, allways pass =nil= as the =context=.
+
 ** Notes
 
 #+BEGIN_SRC sh

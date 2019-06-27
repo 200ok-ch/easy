@@ -78,6 +78,7 @@
 ;; TODO add doc strings to all functions
 ;; TODO add pre conditions to all functions
 
+
 (defn lookup-customer [{id :customer-id :as evt}]
   (->> @config
        :customers
@@ -86,12 +87,26 @@
        (assoc* evt :customer)))
 
 
-(defn lookup-invoice [{:keys [invoice-no] :as evt} context]
-  (->> context
-       (filter #(= invoice-no (:invoice-no %)))
-       first
-       (transform nil)
-       (assoc* evt :invoice)))
+(defn resolve-invoice [{:keys [invoice-no] :as evt} context]
+  (if (nil? context)
+    evt
+    (->> context
+         (filter #(= invoice-no (:invoice-no %)))
+         first
+         (transform nil)
+         (assoc* evt :invoice))))
+
+
+(defn assert-invoice! [{:keys [invoice invoice-no] :as evt}]
+  (when-not invoice
+    (util/warn (str "No invoice for settlement '" invoice-no "'. Abort."))
+    (util/exit 1))
+  evt)
+
+
+(defn add-deferral [evt]
+  (assoc* evt :deferral (not= (-> evt :date .getFullYear)
+                              (-> evt :invoice :date .getFullYear))))
 
 
 ;; TODO make the tax rate configurable via config
@@ -246,6 +261,7 @@
       ;; TODO run xdg-open on the pdf file
       ))
 
+
 (defn add-coverage [evt]
   (let [settlement-total (:net-total evt)
         invoice-total (->> evt :invoice :net-total)
@@ -270,7 +286,9 @@
       (common/validate! ::event)
       merge-defaults
       lookup-customer
-      (lookup-invoice context)
+      (resolve-invoice (:invoice context))
+      assert-invoice!
+      add-deferral
       common/add-iso-date
       add-tax-period
       add-tax-rate-in

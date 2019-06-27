@@ -29,16 +29,16 @@
   "Transforms all events, renders and prints their ledger
   representation."
   [events options]
-  (->> events
-       ;; make sure all events can be found via invoice-no
-       (map invoice-no/unify)
-       ;; transform all events within the context `events`
-       (map (partial transform events))
-       ;; filter to the events that belong to the year given with -y
-       (filter #(.startsWith (:iso-date %) (:year options)))
-       (map templating/render-ledger)
-       (join "\n")
-       println))
+  (let [context (util/bin-by (comp keyword :type) events)]
+    (->> events
+         (map invoice-no/unify)
+         ;; transform all events within the `context`
+         (map (partial transform context))
+         ;; filter to the events that belong to the year given with -y
+         (filter #(.startsWith (:iso-date %) (:year options)))
+         (map templating/render-ledger)
+         (join "\n")
+         println)))
 
 
 (defn invoice!
@@ -111,7 +111,9 @@
   (let [events (->> yaml-events
                     util/parse-yaml
                     (util/validate! ::common/events)
+                    ;; mild transformation
                     (map common/harmonize)
+                    (map invoice-no/unify)
                     (util/validate! ::common/events))]
     (case command
       :noop (noop!)

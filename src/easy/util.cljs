@@ -9,6 +9,17 @@
             [cljs-time.format :as time]))
 
 
+(defn bin-by
+  "Takes a fn `f` and a colection `coll`, returns a map with the value
+  of `f` as keys and a list of items of `coll` for which the value of
+  `f` matches the key. This is confusing, I know."
+  {:test #(do
+            (assert (= (bin-by :type [{:type :a :a 1} {:type :b :b 2} {:type :a :b 42}])
+                       {:a ({:type :a, :b 42} {:type :a, :a 1}), :b ({:type :b, :b 2})})))}
+  [f coll]
+  (reduce #(update %1 (f %2) conj %2) {} coll))
+
+
 (defn sanitize-latex [text]
   (-> text
       (replace "_" " ") ;; FIXME this is a hack
@@ -17,7 +28,8 @@
 
 
 (defn warn [msg]
-  (.error js/console msg))
+  (.error js/console (clj->js msg))
+  msg)
 
 
 (defn sh [& args]
@@ -98,3 +110,7 @@
       (s/explain spec x)
       (process.exit 1))
     x))
+
+
+(defn exit [c]
+  (.exit js/process (or c 0)))

@@ -52,32 +52,32 @@
 
 (s/def ::event (s/and
                 (s/keys :req-un [::type
-                                ::date
-                                ::customer-id
-                                ::number
-                                ::version
-                                ::items]
-                       :opt-un [::customers/customer
-                                ::deadline
-                                ::header
-                                ::footer
-                                ::iso-date
-                                ::tax-rate-in
-                                ::tax-rate-out
-                                ::tax-in
-                                ::tax-out
-                                ::tax-win
-                                ::net-total
-                                ::gross-total
-                                ::tax-period
-                                ::period
-                                ::ledger-state
-                                ::ledger-template
-                                ::latex-template
-                                ::latex-content
-                                ::latex-directory
-                                ::latex-filename
-                                ::pdflatex-cmd])
+                                 ::date
+                                 ::customer-id
+                                 ::number
+                                 ::version
+                                 ::items]
+                        :opt-un [::customers/customer
+                                 ::deadline
+                                 ::header
+                                 ::footer
+                                 ::iso-date
+                                 ::tax-rate-in
+                                 ::tax-rate-out
+                                 ::tax-in
+                                 ::tax-out
+                                 ::tax-win
+                                 ::net-total
+                                 ::gross-total
+                                 ::tax-period
+                                 ::period
+                                 ::ledger-state
+                                 ::ledger-template
+                                 ::latex-template
+                                 ::latex-content
+                                 ::latex-directory
+                                 ::latex-filename
+                                 ::pdflatex-cmd])
                 ::invoice-no/with))
 
 ;; defaults
@@ -104,6 +104,17 @@
        (filter #(= id (:number %)))
        first
        (assoc* event :customer)))
+
+
+(defn resolve-settlement [{:keys [invoice-no] :as evt} ctx]
+  (if (nil? ctx)
+    evt
+    (->> ctx
+         (filter #(= invoice-no (:invoice-no %)))
+         first
+         (transform nil)
+         (assoc* evt :settlement))))
+
 
 ;; TODO make the tax rate configurable via config
 (defn tax-rate-in [evt]
@@ -200,7 +211,7 @@
   "Sets `:ledger-state` to either `*` or `!`, depending on the presence
   of `:settled`"
   [evt]
-  (->> (if (:settled evt) "*" "!")
+  (->> (if (:settlement evt) "*" "!")
        (assoc* evt :ledger-state)))
 
 ;; TODO rewrite in a way that it does not need to be adjusted for
@@ -304,11 +315,12 @@
       ;; TODO run xdg-open on the pdf file
       ))
 
-(defmethod transform :invoice [_ event]
+(defmethod transform :invoice [context event]
   (-> event
       (common/validate! ::event)
       merge-defaults
       lookup-customer
+      (resolve-settlement (:settlement context))
       common/add-iso-date
       add-deferral
       add-period
