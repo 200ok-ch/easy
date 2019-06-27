@@ -265,14 +265,14 @@
     (->> (templating/template filename evt)
          (assoc* evt :latex-filename))))
 
-;; FIXME there is no field settled anymore
+
+;; this can only be infered when settlement has been resolved
 (defn add-deferral [evt]
-  (let [booking-year (-> evt :date .getFullYear)
-        settled-date (-> evt :settled)
-        settled-year (if settled-date
-                       (-> settled-date .getFullYear)
-                       (inc booking-year))]
-    (assoc* evt :deferral (< booking-year settled-year))))
+  (if-let [settlement (-> evt :settlement)]
+    (assoc* evt :deferral (not= (-> evt :date .getFullYear)
+                                (-> settlement :date .getFullYear)))
+    (assoc* evt :deferral true)))
+
 
 ;; TODO refactor everything so that latex has its own submap wuth
 ;; content, path etc. so we can have a generic write! function which
@@ -335,4 +335,5 @@
       add-tax-out
       add-tax-win
       add-templates
+      util/warn
       (common/validate! ::event)))

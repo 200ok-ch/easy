@@ -60,8 +60,8 @@ writing templates:
 
 ** Semantics
 
-Through the code events should be called `evt`, instead of e.g.
-`invoice` or `settlement`. This is mostly because its shorter and it
+Throughout the code events should be called `evt`, instead of e.g.
+`invoice` or `settlement`. This is because its shorter, but mostly it
 makes copying or refactoring less error prone.
 
 | type       | path        | modus     |

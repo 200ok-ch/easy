@@ -104,9 +104,12 @@
   evt)
 
 
+;; this can only be infered when invoice has been resolved
 (defn add-deferral [evt]
-  (assoc* evt :deferral (not= (-> evt :date .getFullYear)
-                              (-> evt :invoice :date .getFullYear))))
+  (if-let [invoice (-> evt :invoice)]
+    (assoc* evt :deferral (not= (-> evt :date .getFullYear)
+                                (-> invoice :date .getFullYear)))
+    evt))
 
 
 ;; TODO make the tax rate configurable via config
@@ -262,19 +265,21 @@
       ))
 
 
+;; this can only be calculated if invoice is already resolved
 (defn add-coverage [evt]
-  (let [settlement-total (:net-total evt)
-        invoice-total (->> evt :invoice :net-total)
-        coverage (/ settlement-total invoice-total)]
-    (if (or (< coverage 0.98)
-            (> coverage 1.02))
-      (util/warn (str "Coverage " coverage " on settlement for " (:invoice-no evt))))
-    (assoc* evt :coverage coverage)))
+  (if (:invoice evt)
+    (let [settlement-total (:net-total evt)
+          invoice-total (->> evt :invoice :net-total)
+          coverage (/ settlement-total invoice-total)]
+      (if (or (< coverage 0.98)
+              (> coverage 1.02))
+        (util/warn (str "Coverage " coverage " on settlement for " (:invoice-no evt))))
+      (assoc* evt :coverage coverage))
+    evt))
 
 
 (defn add-distribution [evt]
-  (let [invoice (->> evt :invoice (transform nil))
-        total (-> invoice :amount)]
+  (let [total (-> evt :invoice :amount)]
     (->> invoice
          :items
          (map (fn [i] (update i :amount #(util/round-currency (* % (:coverage evt))))))
@@ -287,7 +292,7 @@
       merge-defaults
       lookup-customer
       (resolve-invoice (:invoice context))
-      assert-invoice!
+      ;; assert-invoice!
       add-deferral
       common/add-iso-date
       add-tax-period

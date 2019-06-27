@@ -17,3 +17,8 @@
                   ", in event "
                   (prn-str event)))
   event)
+
+
+;; silently ignoring transformation of nil
+(defmethod transform nil [_ _]
+  nil)
