@@ -335,5 +335,4 @@
       add-tax-out
       add-tax-win
       add-templates
-      util/warn
       (common/validate! ::event)))
