@@ -2,6 +2,7 @@
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
+            [easy.common.invoice-no :as invoice-no]
             [easy.templating :as templating]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]
@@ -22,16 +23,11 @@
 ;; required
 (s/def ::type #{"invoice"})
 (s/def ::date util/date?)
-(s/def ::customer-id pos-int?)
-(s/def ::number pos-int?) ;; sequence
-(s/def ::version pos-int?)
 (s/def ::items (s/coll-of ::item/item))
 
 
 ;; optional
-(s/def ::settled util/date?)
 (s/def ::iso-date (s/and string? common/match-iso-date))
-(s/def ::iso-settled (s/and string? common/match-iso-date))
 (s/def ::deadline pos-int?) ;; in days
 (s/def ::header string?)
 (s/def ::footer string?)
@@ -42,7 +38,6 @@
 (s/def ::tax-win float?)
 (s/def ::net-total float?)
 (s/def ::gross-total float?)
-(s/def ::invoice-no (s/and string? match-invoice-no))
 (s/def ::tax-period (s/or :settled (s/and string? match-period)
                           :unsettled #{"Unsettled"}))
 (s/def ::period (s/or :settled (s/and string? match-period)
@@ -55,37 +50,35 @@
 (s/def ::latex-filename string?)
 (s/def ::pdflatex-cmd string?)
 
-(s/def ::event (s/keys :req-un [::type
-                                ::date
-                                ::customer-id
-                                ::number
-                                ::version
-                                ::items]
-                       :opt-un [::customers/customer
-                                ::settled
-                                ::deadline
-                                ::header
-                                ::footer
-                                ::iso-date
-                                ::iso-settled
-                                ::tax-rate-in
-                                ::tax-rate-out
-                                ::tax-in
-                                ::tax-out
-                                ::tax-win
-                                ::net-total
-                                ::gross-total
-                                ::invoice-no
-                                ::tax-period
-                                ::period
-                                ::ledger-state
-                                ::ledger-template
-                                ::latex-template
-                                ::latex-content
-                                ::latex-directory
-                                ::latex-filename
-                                ::pdflatex-cmd]))
-
+(s/def ::event (s/and
+                (s/keys :req-un [::type
+                                 ::date
+                                 ::customer-id
+                                 ::number
+                                 ::version
+                                 ::items]
+                        :opt-un [::customers/customer
+                                 ::deadline
+                                 ::header
+                                 ::footer
+                                 ::iso-date
+                                 ::tax-rate-in
+                                 ::tax-rate-out
+                                 ::tax-in
+                                 ::tax-out
+                                 ::tax-win
+                                 ::net-total
+                                 ::gross-total
+                                 ::tax-period
+                                 ::period
+                                 ::ledger-state
+                                 ::ledger-template
+                                 ::latex-template
+                                 ::latex-content
+                                 ::latex-directory
+                                 ::latex-filename
+                                 ::pdflatex-cmd])
+                ::invoice-no/with))
 
 ;; defaults
 
@@ -112,24 +105,27 @@
        first
        (assoc* event :customer)))
 
-(defn add-iso-settled [event]
-  (if-let [settled (:settled event)]
-    (->> settled
-         cljs-time/date-time
-         (time/unparse util/iso-formatter)
-         (assoc* event :iso-settled))
-    event))
+
+(defn resolve-settlement [{:keys [invoice-no] :as evt} ctx]
+  (if (nil? ctx)
+    evt
+    (->> ctx
+         (filter #(= invoice-no (:invoice-no %)))
+         first
+         (transform nil)
+         (assoc* evt :settlement))))
+
 
 ;; TODO make the tax rate configurable via config
-(defn tax-rate-in [invoice]
-  (if (< (:date invoice)
+(defn tax-rate-in [evt]
+  (if (< (:date evt)
          (time/parse "2018-01-01"))
     0.08
     0.077))
 
 ;; TODO make the tax rate configurable via config
-(defn tax-rate-out [invoice]
-  (let [date (:date invoice)]
+(defn tax-rate-out [evt]
+  (let [date (:date evt)]
     (cond
       ;; saldo pre 2018
       (< date (time/parse "2018-01-01")) 0.061
@@ -138,60 +134,61 @@
       ;; saldo from 2018
       :else 0.059)))
 
-(defn add-tax-rate-in [invoice]
-  (->> (tax-rate-in invoice)
-       (assoc* invoice :tax-rate-in)))
+(defn add-tax-rate-in [evt]
+  (->> (tax-rate-in evt)
+       (assoc* evt :tax-rate-in)))
 
-(defn add-tax-rate-out [invoice]
-  (->> (tax-rate-out invoice)
-       (assoc* invoice :tax-rate-out)))
+(defn add-tax-rate-out [evt]
+  (->> (tax-rate-out evt)
+       (assoc* evt :tax-rate-out)))
 
-(defn add-tax-in [invoice]
-  (->> (:net-total invoice)
-       (* (:tax-rate-in invoice))
+(defn add-tax-in [evt]
+  (->> (:net-total evt)
+       (* (:tax-rate-in evt))
        util/round-currency
-       (assoc* invoice :tax-in)))
+       (assoc* evt :tax-in)))
 
-(defn add-tax-out [invoice]
-  (->> (:gross-total invoice)
-       (* (:tax-rate-out invoice))
+(defn add-tax-out [evt]
+  (->> (:gross-total evt)
+       (* (:tax-rate-out evt))
        util/round-currency
-       (assoc* invoice :tax-out)))
+       (assoc* evt :tax-out)))
 
-(defn add-tax-win [invoice]
-  (->> (:tax-out invoice)
-       (- (:tax-in invoice))
+(defn add-tax-win [evt]
+  (->> (:tax-out evt)
+       (- (:tax-in evt))
        util/round-currency
-       (assoc* invoice :tax-win)))
+       (assoc* evt :tax-win)))
 
-(defn transform-items [invoice]
-  (update invoice :items (partial map item/transform)))
+(defn transform-items [evt]
+  (update evt :items (partial map item/transform)))
 
-(defn add-net-total [invoice]
-  (->> invoice
+(defn add-net-total [evt]
+  (->> evt
        :items
        (map :amount)
        (reduce +)
        ;; TODO calculate and subtract discount
        util/round-currency
-       (assoc* invoice :net-total)))
+       (assoc* evt :net-total)))
 
-(defn add-gross-total [invoice]
-  (->> (+ (:net-total invoice)
-          (:tax-in invoice))
+(defn add-gross-total [evt]
+  (->> (+ (:net-total evt)
+          (:tax-in evt))
        util/round-currency
-       (assoc* invoice :gross-total)))
+       (assoc* evt :gross-total)))
 
-(defn add-invoice-no [invoice]
+(defn add-invoice-no [evt]
   (->> [:customer-id :number :version]
-       (map invoice)
+       (map evt)
        (join ".")
-       (assoc* invoice :invoice-no)))
+       (assoc* evt :invoice-no)))
 
 ;; TODO rewrite in a way that it does not need to be adjusted for
 ;; every year
-(defn add-tax-period [invoice]
-  (->> (if-let [date (:settled invoice)]
+;; FIXME there is no field settled anymore
+(defn add-tax-period [evt]
+  (->> (if-let [date (:settled evt)]
          (cond
            (and (>= date (time/parse "2018-01-01"))
                 (<= date (time/parse "2018-05-31")))
@@ -207,19 +204,20 @@
            "2019-H2"
            :else "Unknown")
          "Unsettled")
-       (assoc* invoice :tax-period)))
+       (assoc* evt :tax-period)))
 
+;; FIXME there is no field settled anymore
 (defn add-ledger-state
   "Sets `:ledger-state` to either `*` or `!`, depending on the presence
   of `:settled`"
-  [invoice]
-  (->> (if (:settled invoice) "*" "!")
-       (assoc* invoice :ledger-state)))
+  [evt]
+  (->> (if (:settlement evt) "*" "!")
+       (assoc* evt :ledger-state)))
 
 ;; TODO rewrite in a way that it does not need to be adjusted for
 ;; every year
-(defn add-period [invoice]
-  (->> (let [date (:date invoice)]
+(defn add-period [evt]
+  (->> (let [date (:date evt)]
          (cond
            (and (>= date (time/parse "2017-06-01"))
                 (<= date (time/parse "2017-12-31")))
@@ -237,10 +235,10 @@
                 (<= date (time/parse "2019-12-31")))
            "2019-H2"
            :else "Unknown"))
-       (assoc* invoice :period)))
+       (assoc* evt :period)))
 
-(defn add-templates [invoice]
-  (-> invoice
+(defn add-templates [evt]
+  (-> evt
       (assoc* :report-template
               (get-in @config [:invoice :report :template]))
       (assoc* :latex-template
@@ -248,32 +246,33 @@
       (assoc* :ledger-template
               (get-in @config [:templates :ledger :invoice]))))
 
-(defn order-items-by-amount [invoice]
-  (merge invoice
-         {:items (reverse (sort-by :amount (:items invoice)))}))
+(defn order-items-by-amount [evt]
+  (merge evt
+         {:items (reverse (sort-by :amount (:items evt)))}))
 
-(defn add-latex-content [invoice]
-  (->> invoice
+(defn add-latex-content [evt]
+  (->> evt
        templating/render-latex
-       (assoc* invoice :latex-content)))
+       (assoc* evt :latex-content)))
 
-(defn add-latex-directory [invoice]
+(defn add-latex-directory [evt]
   (let [directory (get-in @config [:invoice :latex :directory])]
-    (->> (templating/template directory invoice)
-         (assoc* invoice :latex-directory))))
+    (->> (templating/template directory evt)
+         (assoc* evt :latex-directory))))
 
-(defn add-latex-filename [invoice]
+(defn add-latex-filename [evt]
   (let [filename (get-in @config [:invoice :latex :filename])]
-    (->> (templating/template filename invoice)
-         (assoc* invoice :latex-filename))))
+    (->> (templating/template filename evt)
+         (assoc* evt :latex-filename))))
 
-(defn add-deferral [invoice]
-  (let [booking-year (-> invoice :date .getFullYear)
-        settled-date (-> invoice :settled)
-        settled-year (if settled-date
-                       (-> settled-date .getFullYear)
-                       (inc booking-year))]
-    (assoc* invoice :deferral (< booking-year settled-year))))
+
+;; this can only be infered when settlement has been resolved
+(defn add-deferral [evt]
+  (if-let [settlement (-> evt :settlement)]
+    (assoc* evt :deferral (not= (-> evt :date .getFullYear)
+                                (-> settlement :date .getFullYear)))
+    (assoc* evt :deferral true)))
+
 
 ;; TODO refactor everything so that latex has its own submap wuth
 ;; content, path etc. so we can have a generic write! function which
@@ -282,11 +281,11 @@
 (defn write-latex! [{directory :latex-directory
                      filename :latex-filename
                      content :latex-content
-                     :as invoice}]
+                     :as evt}]
   ;; TODO use some path join here
   (-> (str directory "/" filename)
       (util/spit content))
-  invoice)
+  evt)
 
 ;; (defn write! [event format]
 ;;   (->> [:path :content]
@@ -295,17 +294,17 @@
 
 (defn add-pdflatex-cmd [{directory :latex-directory
                          filename :latex-filename
-                         :as invoice}]
+                         :as evt}]
   (->> (str "(cd " directory " && pdflatex " filename ")")
-       (assoc* invoice :pdflatex-cmd)))
+       (assoc* evt :pdflatex-cmd)))
 
 (defn run-pdflatex! [{cmd :pdflatex-cmd
-                      :as invoice}]
+                      :as evt}]
   (util/sh cmd)
-  invoice)
+  evt)
 
-(defn transform-latex! [invoice]
-  (-> invoice
+(defn transform-latex! [evt]
+  (-> evt
       order-items-by-amount
       add-latex-content
       add-latex-directory
@@ -316,13 +315,13 @@
       ;; TODO run xdg-open on the pdf file
       ))
 
-(defmethod transform :invoice [_ event]
+(defmethod transform :invoice [context event]
   (-> event
       (common/validate! ::event)
       merge-defaults
       lookup-customer
+      (resolve-settlement (:settlement context))
       common/add-iso-date
-      add-iso-settled
       add-deferral
       add-period
       add-ledger-state
@@ -335,6 +334,5 @@
       add-gross-total
       add-tax-out
       add-tax-win
-      add-invoice-no
       add-templates
       (common/validate! ::event)))

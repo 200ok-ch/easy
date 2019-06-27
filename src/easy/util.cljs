@@ -8,21 +8,38 @@
             ["sprintf-js" :refer [sprintf]]
             [cljs-time.format :as time]))
 
+
+(defn bin-by
+  "Takes a fn `f` and a colection `coll`, returns a map with the value
+  of `f` as keys and a list of items of `coll` for which the value of
+  `f` matches the key. This is confusing, I know."
+  {:test #(do
+            (assert (= (bin-by :type [{:type :a :a 1} {:type :b :b 2} {:type :a :b 42}])
+                       {:a ({:type :a, :b 42} {:type :a, :a 1}), :b ({:type :b, :b 2})})))}
+  [f coll]
+  (reduce #(update %1 (f %2) conj %2) {} coll))
+
+
 (defn sanitize-latex [text]
   (-> text
       (replace "_" " ") ;; FIXME this is a hack
       (replace "#" "\\#")
       (replace "&" "\\&")))
 
+
 (defn warn [msg]
-  (.error js/console msg))
+  (.error js/console (clj->js msg))
+  msg)
+
 
 (defn sh [& args]
   (exec (join " " args)))
 
-(defn spy [x]
-  (pprint x)
-  x)
+
+(defn spy [& args]
+  (apply pprint args)
+  (last args))
+
 
 (defn slurp [path]
   {:pre [(string? path)]}
@@ -31,16 +48,20 @@
     (catch :default e
       (println "ERROR: Cannot read file " path " due to exception " e))))
 
+
 (defn spit [path content]
   {:pre [(string? path)
          (string? content)]}
   (.writeFileSync fs path content))
 
+
 (defn parse-yaml [string]
   (-> (yaml/load string)
       (js->clj :keywordize-keys true)))
 
+
 (def date? (partial instance? js/Date))
+
 
 (defn deep-merge [v & vs]
   (letfn [(rec-merge [v1 v2]
@@ -51,11 +72,14 @@
       (reduce #(rec-merge %1 %2) v vs)
       (last vs))))
 
+
 (def iso-formatter
   (time/formatter "yyyy-MM-dd"))
 
+
 (def round-currency
   (comp js/parseFloat (partial sprintf "%.2f")))
+
 
 (defn assoc*
   "Like `assoc` but adds `key` only if hashmap does not already have
@@ -69,6 +93,13 @@
       hashmap)
     (assoc hashmap key value)))
 
+
+(defn merge*
+  "A rather perculiar implementation of reverse-merge."
+  [a b]
+  (reduce (fn [acc [key val]] (assoc* acc key val)) a b))
+
+
 (defn validate!
   "Validates `x` against `spec` and exits the process in case `x` does
   not validate. If it validates it returns `x`. (`common/validate!`
@@ -79,3 +110,7 @@
       (s/explain spec x)
       (process.exit 1))
     x))
+
+
+(defn exit [c]
+  (.exit js/process (or c 0)))

@@ -15,24 +15,31 @@
             easy.outlay
             easy.settlement
             [easy.common :as common]
+            [easy.common.invoice-no :as invoice-no]
             [clojure.tools.cli :refer [parse-opts]]
             [cljs.pprint :refer [pprint]]
             [cljs.spec.alpha :as s]
             [clojure.string :refer [join]]))
 
-;; ------------------------------------------------------------
+
 ;; commands
+
 
 (defn ledger!
   "Transforms all events, renders and prints their ledger
   representation."
   [events options]
-  (->> events
-       (map (partial transform events))
-       (filter #(.startsWith (:iso-date %) (:year options)))
-       (map templating/render-ledger)
-       (join "\n")
-       println))
+  (let [context (util/bin-by (comp keyword :type) events)]
+    (->> events
+         (map invoice-no/unify)
+         ;; transform all events within the `context`
+         (map (partial transform context))
+         ;; filter to the events that belong to the year given with -y
+         (filter #(.startsWith (:iso-date %) (:year options)))
+         (map templating/render-ledger)
+         (join "\n")
+         println)))
+
 
 (defn invoice!
   "Generates an invoice PDF and prints a report."
@@ -47,6 +54,7 @@
        templating/render-report
        println))
 
+
 (defn transform!
   "Transforms all input events pretty prints the result and exits."
   [events options]
@@ -54,16 +62,19 @@
        (map (partial transform events))
        pprint))
 
+
 (defn noop!
   "Does nothing."
   []
   (do))
+
 
 (defn validate!
   "Validates all input events and exits."
   [events options]
   (->> events
        (map (partial transform events))))
+
 
 (defn overview!
   "Renders an overview."
@@ -74,8 +85,9 @@
        templating/render-overview
        println))
 
-;; ------------------------------------------------------------
+
 ;; main
+
 
 (defn read-stdin
   "Reads from standard in until end, then calls `callback` with the
@@ -92,13 +104,16 @@
     (.on stdin "data" receive-data)
     (.on stdin "end" receive-end)))
 
+
 (defn run
   "Dispatches to a command function and exits the process afterwards."
   [command options yaml-events]
   (let [events (->> yaml-events
                     util/parse-yaml
                     (util/validate! ::common/events)
+                    ;; mild transformation
                     (map common/harmonize)
+                    (map invoice-no/unify)
                     (util/validate! ::common/events))]
     (case command
       :noop (noop!)
@@ -114,10 +129,12 @@
     ;; all good, exit nicely
     (process.exit 0)))
 
+
 (def cli-options
   [["-i" "--input INPUT" "Input file"]
    ["-y" "--year NUMBER" "Year"]
    ["-n" "--no NUMBER" "Invoice No"]])
+
 
 ;; TODO get rid of the warning by using reader conditionals in
 ;; https://github.com/clojure/tools.cli/blob/master/src/main/clojure/clojure/tools/cli.cljc

@@ -2,6 +2,7 @@
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
+            [easy.common.invoice-no :as invoice-no]
             [easy.templating :as templating]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]
@@ -13,24 +14,12 @@
 
 ;; spec
 
-(def match-invoice-no (partial re-matches #"^\d+\.\d+\.\d+$"))
 (def match-period (partial re-matches #"^\d{4}-(H|Q)\d$"))
 
 ;; required
 (s/def ::type #{"settlement"})
 (s/def ::date util/date?)
 (s/def ::amount float?) ;; this should be equal to the invoice's gross-total
-
-(s/def ::customer-id pos-int?)
-(s/def ::number pos-int?) ;; sequence
-(s/def ::version pos-int?)
-
-(s/def ::invoice-no (s/and string? match-invoice-no))
-
-(s/def ::with-invoice-no (s/or :joined (s/keys :req-un [::invoice-no])
-                               :split (s/keys :req-un [::customer-id
-                                                       ::number
-                                                       ::version])))
 
 (s/def ::items (s/coll-of ::item/item))
 
@@ -70,7 +59,7 @@
                                  ::latex-directory
                                  ::latex-filename
                                  ::pdflatex-cmd])
-                ::with-invoice-no))
+                ::invoice-no/with))
 
 
 ;; defaults
@@ -89,6 +78,7 @@
 ;; TODO add doc strings to all functions
 ;; TODO add pre conditions to all functions
 
+
 (defn lookup-customer [{id :customer-id :as evt}]
   (->> @config
        :customers
@@ -97,36 +87,29 @@
        (assoc* evt :customer)))
 
 
-(defn add-invoice-no [evt]
-  (->> [:customer-id :number :version]
-       (map evt)
-       (join ".")
-       (assoc* evt :invoice-no)))
+(defn resolve-invoice [{:keys [invoice-no] :as evt} context]
+  (if (nil? context)
+    evt
+    (->> context
+         (filter #(= invoice-no (:invoice-no %)))
+         first
+         (transform nil)
+         (assoc* evt :invoice))))
 
 
-(defn merge* [a b]
-  (reduce (fn [acc [key val]] (assoc* acc key val)) a b))
+(defn assert-invoice! [{:keys [invoice invoice-no] :as evt}]
+  (when-not invoice
+    (util/warn (str "No invoice for settlement '" invoice-no "'. Abort."))
+    (util/exit 1))
+  evt)
 
 
-(defn add-invoice-no-details [{:keys [invoice-no] :as evt}]
-  (if invoice-no
-    (->> (split invoice-no #"\.")
-         (map int)
-         (zipmap [:customer-id :number :version])
-         (merge* evt))
+;; this can only be infered when invoice has been resolved
+(defn add-deferral [evt]
+  (if-let [invoice (-> evt :invoice)]
+    (assoc* evt :deferral (not= (-> evt :date .getFullYear)
+                                (-> invoice :date .getFullYear)))
     evt))
-
-(def unify-invoice-no
-  (comp add-invoice-no
-        add-invoice-no-details))
-
-(defn lookup-invoice [{:keys [invoice-no] :as evt} context]
-  (->> context
-       (map unify-invoice-no)
-       (filter #(= invoice-no (:invoice-no %)))
-       first
-       (transform nil)
-       (assoc* evt :invoice)))
 
 
 ;; TODO make the tax rate configurable via config
@@ -281,19 +264,22 @@
       ;; TODO run xdg-open on the pdf file
       ))
 
+
+;; this can only be calculated if invoice is already resolved
 (defn add-coverage [evt]
-  (let [settlement-total (:net-total evt)
-        invoice-total (->> evt :invoice :net-total)
-        coverage (/ settlement-total invoice-total)]
-    (if (or (< coverage 0.98)
-            (> coverage 1.02))
-      (util/warn (str "Coverage " coverage " on settlement for " (:invoice-no evt))))
-    (assoc* evt :coverage coverage)))
+  (if (:invoice evt)
+    (let [settlement-total (:net-total evt)
+          invoice-total (->> evt :invoice :net-total)
+          coverage (/ settlement-total invoice-total)]
+      (if (or (< coverage 0.98)
+              (> coverage 1.02))
+        (util/warn (str "Coverage " coverage " on settlement for " (:invoice-no evt))))
+      (assoc* evt :coverage coverage))
+    evt))
 
 
 (defn add-distribution [evt]
-  (let [invoice (->> evt :invoice (transform nil))
-        total (-> invoice :amount)]
+  (let [total (-> evt :invoice :amount)]
     (->> invoice
          :items
          (map (fn [i] (update i :amount #(util/round-currency (* % (:coverage evt))))))
@@ -304,9 +290,10 @@
   (-> event
       (common/validate! ::event)
       merge-defaults
-      unify-invoice-no
       lookup-customer
-      (lookup-invoice context)
+      (resolve-invoice (:invoice context))
+      ;; assert-invoice!
+      add-deferral
       common/add-iso-date
       add-tax-period
       add-tax-rate-in
