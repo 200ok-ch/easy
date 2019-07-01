@@ -45,11 +45,15 @@
 
 ;; transformer
 
+(defn- add-respect-tax-amount [evt]
+  (assoc* evt :respect-tax-amount (util/round-currency (* (:amount evt) 0.077))))
+
 
 (defmethod transform :expense [_ event]
   (-> event
       (common/validate! ::event)
       common/add-iso-date
+      add-respect-tax-amount
       (assoc* :ledger-state "*") ;; always cleared
       (assoc* :ledger-template
               (get-in @config [:templates :ledger :expense]))

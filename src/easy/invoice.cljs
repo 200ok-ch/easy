@@ -186,23 +186,23 @@
 
 ;; TODO rewrite in a way that it does not need to be adjusted for
 ;; every year
-;; FIXME there is no field settled anymore
 (defn add-tax-period [evt]
-  (->> (if-let [date (:settled evt)]
-         (cond
-           (and (>= date (time/parse "2018-01-01"))
-                (<= date (time/parse "2018-05-31")))
-           "2018-H1"
-           (and (>= date (time/parse "2018-06-01"))
-                (<= date (time/parse "2018-12-31")))
-           "2018-H2"
-           (and (>= date (time/parse "2019-01-01"))
-                (<= date (time/parse "2019-05-31")))
-           "2019-H1"
-           (and (>= date (time/parse "2019-06-01"))
-                (<= date (time/parse "2019-12-31")))
-           "2019-H2"
-           :else "Unknown")
+  (->> (if-let [settlement (-> evt :settlement)]
+         (let [date (-> settlement :date)]
+           (cond
+             (and (>= date (time/parse "2018-01-01"))
+                  (<= date (time/parse "2018-05-31")))
+             "2018-H1"
+             (and (>= date (time/parse "2018-06-01"))
+                  (<= date (time/parse "2018-12-31")))
+             "2018-H2"
+             (and (>= date (time/parse "2019-01-01"))
+                  (<= date (time/parse "2019-05-31")))
+             "2019-H1"
+             (and (>= date (time/parse "2019-06-01"))
+                  (<= date (time/parse "2019-12-31")))
+             "2019-H2"
+             :else "Unknown"))
          "Unsettled")
        (assoc* evt :tax-period)))
 

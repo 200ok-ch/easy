@@ -29,12 +29,14 @@
   "Transforms all events, renders and prints their ledger
   representation."
   [events options]
+  ;; TODO use this in every other subcommand as well
   (let [context (util/bin-by (comp keyword :type) events)]
     (->> events
          (map invoice-no/unify)
          ;; transform all events within the `context`
          (map (partial transform context))
          ;; filter to the events that belong to the year given with -y
+         ;; TODO do not filter when year is not given
          (filter #(.startsWith (:iso-date %) (:year options)))
          (map templating/render-ledger)
          (join "\n")
