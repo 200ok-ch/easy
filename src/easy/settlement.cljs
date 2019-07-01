@@ -97,8 +97,8 @@
          (assoc* evt :invoice))))
 
 
-(defn assert-invoice! [{:keys [invoice invoice-no] :as evt}]
-  (when-not invoice
+(defn assert-invoice! [{:keys [invoice invoice-no] :as evt} context]
+  (if (and context (not invoice))
     (util/warn (str "No invoice for settlement '" invoice-no "'. Abort."))
     (util/exit 1))
   evt)
@@ -280,10 +280,16 @@
 
 (defn add-distribution [evt]
   (let [total (-> evt :invoice :amount)]
-    (->> invoice
+    (->> evt
+         :invoice
          :items
          (map (fn [i] (update i :amount #(util/round-currency (* % (:coverage evt))))))
+         vec ;; for iterating in handlebars templates this needs to be a vector, not a list!
          (assoc* evt :distribution))))
+
+
+(defn add-debug [evt]
+  (assoc* evt :debug (prn-str evt)))
 
 
 (defmethod transform :settlement [context event]
@@ -292,7 +298,7 @@
       merge-defaults
       lookup-customer
       (resolve-invoice (:invoice context))
-      ;; assert-invoice!
+      ;; (assert-invoice! context)
       add-deferral
       common/add-iso-date
       add-tax-period
@@ -306,4 +312,5 @@
       add-tax-out
       add-tax-win
       add-templates
+      add-debug
       (common/validate! ::event)))
