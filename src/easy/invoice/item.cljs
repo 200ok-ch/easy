@@ -72,7 +72,10 @@
 
 (defn- add-hours [item]
   (if-let [timesheet-data (:timesheet-data item)]
-    (assoc* item :hours (sum-time timesheet-data))
+    (let [sum (sum-time timesheet-data)]
+      (-> item
+          (assoc :sum-hours sum) ;; actual sum
+          (assoc* :hours sum))) ;; this might be overridden
     item))
 
 (defn- add-amount [item]
