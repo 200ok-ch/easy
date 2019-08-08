@@ -45,14 +45,25 @@
 
 ;; transformer
 
+
+(defn- add-respect-tax-rate [evt]
+  ;; TODO unhardcode
+  (assoc* evt :respect-tax-rate 0.077))
+
+
 (defn- add-respect-tax-amount [evt]
-  (assoc* evt :respect-tax-amount (util/round-currency (* (:amount evt) 0.077))))
+  (->> (* (:foreign-amount evt)
+          (:exchange-rate evt)
+          (:respect-tax-rate evt))
+       util/round-currency
+       (assoc* evt :respect-tax-amount)))
 
 
 (defmethod transform :expense [_ event]
   (-> event
       (common/validate! ::event)
       common/add-iso-date
+      add-respect-tax-rate
       add-respect-tax-amount
       (assoc* :ledger-state "*") ;; always cleared
       (assoc* :ledger-template
