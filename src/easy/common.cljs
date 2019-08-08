@@ -15,7 +15,8 @@
 (def match-template (partial re-matches #".*\.hbs"))
 
 
-(s/def ::type #{"opening"        ;; Eröffnungsbilanz
+(s/def ::type #{"plain"          ;; Allgemeine Buchung
+                "opening"        ;; Eröffnungsbilanz
                 "invoice"        ;; Rechnung wurde gestellt
                 "settlement"     ;; Rechnung wurde beglichen
                 "expense"        ;; Ausgabe

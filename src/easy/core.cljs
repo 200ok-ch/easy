@@ -7,6 +7,7 @@
             [easy.transform :refer [transform]]
             [easy.overview :as overview]
             [easy.invoice :as invoice]
+            easy.plain
             easy.expense
             easy.refund
             easy.opening
