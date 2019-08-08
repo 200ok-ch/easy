@@ -31,6 +31,7 @@
 (s/def ::tax-out float?)
 (s/def ::tax-win float?)
 (s/def ::net-total float?)
+(s/def ::remaining float?)
 (s/def ::tax-period (s/and string? match-period))
 (s/def ::ledger-template (s/and string? common/match-template))
 (s/def ::latex-template (s/and string? common/match-template))
@@ -51,6 +52,7 @@
                                  ::tax-out
                                  ::tax-win
                                  ::net-total
+                                 ::remaining
                                  ::tax-period
                                  ::ledger-state
                                  ::ledger-template
@@ -288,6 +290,17 @@
          (assoc* evt :distribution))))
 
 
+(defn add-remaining [evt]
+  (if-let [invoice (-> evt :invoice)]
+    (let [invoice-amount (-> invoice :gross-total)
+          payment-amount (-> evt :amount)
+          remaining (- invoice-amount payment-amount)]
+      (if (not= 0 remaining)
+        (assoc* evt :remaining remaining)
+        evt))
+    evt))
+
+
 (defn add-debug [evt]
   (assoc* evt :debug (prn-str evt)))
 
@@ -307,6 +320,7 @@
       transform-items
       add-net-total
       add-coverage
+      add-remaining
       add-distribution
       add-tax-in
       add-tax-out

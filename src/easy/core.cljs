@@ -60,9 +60,10 @@
 (defn transform!
   "Transforms all input events pretty prints the result and exits."
   [events options]
-  (->> events
-       (map (partial transform events))
-       pprint))
+  (let [context (util/bin-by (comp keyword :type) events)]
+    (->> events
+         (map (partial transform context))
+         pprint)))
 
 
 (defn noop!

@@ -13,7 +13,7 @@
 (s/def ::type #{"expense"})
 (s/def ::date util/date?)
 (s/def ::amount float?)
-(s/def ::category string?)
+(s/def ::payer string?)
 (s/def ::account string?)
 
 
@@ -27,7 +27,7 @@
 (s/def ::event (s/keys :req-un [::type
                                 ::date
                                 ::amount
-                                ::category
+                                ::payer
                                 ::account]
                        :opt-un [::description]))
 
