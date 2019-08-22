@@ -294,7 +294,7 @@
   (if-let [invoice (-> evt :invoice)]
     (let [invoice-amount (-> invoice :gross-total)
           payment-amount (-> evt :amount)
-          remaining (- invoice-amount payment-amount)]
+          remaining (util/round-currency (- invoice-amount payment-amount))]
       (if (not= 0 remaining)
         (assoc* evt :remaining remaining)
         evt))
