@@ -15,6 +15,7 @@
             easy.salary
             easy.outlay
             easy.settlement
+            easy.adminshare
             [easy.common :as common]
             [easy.common.invoice-no :as invoice-no]
             [clojure.tools.cli :refer [parse-opts]]
