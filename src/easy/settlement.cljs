@@ -101,9 +101,10 @@
 
 (defn assert-invoice! [{:keys [invoice invoice-no] :as evt} context]
   (if (and context (not invoice))
-    (util/warn (str "No invoice for settlement '" invoice-no "'. Abort."))
-    (util/exit 1))
-  evt)
+    (do
+      (util/warn (str "No invoice for settlement '" invoice-no "'. Abort."))
+      (util/exit 1))
+    evt))
 
 
 ;; this can only be infered when invoice has been resolved
@@ -304,14 +305,17 @@
 (defn add-debug [evt]
   (assoc* evt :debug (prn-str evt)))
 
-
+;; `context` can be a map of types and vectors of events
+;;
+;; `context` can also be nil, this is the case if the event is
+;; transformed while being resolved for another event
 (defmethod transform :settlement [context event]
   (-> event
       (common/validate! ::event)
       merge-defaults
       lookup-customer
       (resolve-invoice (:invoice context))
-      ;; (assert-invoice! context)
+      (assert-invoice! context)
       add-deferral
       common/add-iso-date
       add-tax-period
