@@ -81,14 +81,19 @@
   (comp js/parseFloat (partial sprintf "%.2f")))
 
 
+(defn include? [item collection]
+  (some #{item} collection))
+
+
 (defn assoc*
   "Like `assoc` but adds `key` only if hashmap does not already have
   `key` (preset). Warns if preset and `value` differ. (Also takes only
   one `key` and `value`.)"
   [hashmap key value]
   (if-let [preset (key hashmap)]
-    (do
-      (if (not= preset value)
+    (let [ignored (get hashmap :ignore-warnings [])]
+      (if (and (not= preset value)
+               (not (include? (name key) ignored)))
         (warn (str "Overwriting " key " " value " with diffing preset " preset)))
       hashmap)
     (assoc hashmap key value)))
