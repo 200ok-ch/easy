@@ -266,7 +266,7 @@
          (assoc* evt :latex-filename))))
 
 
-;; this can only be infered when settlement has been resolved
+;; this can only be inferred when settlement has been resolved
 (defn add-deferral [evt]
   (if-let [settlement (-> evt :settlement)]
     (assoc* evt :deferral (not= (-> evt :date .getFullYear)
