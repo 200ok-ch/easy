@@ -23,7 +23,8 @@
                 "refund"         ;; Rückerstattung
                 "reconciliation" ;; Ausgleichsbuchung
                 "salary"         ;; Gehalt
-                "outlay"})       ;; Spesenabrechnung
+                "outlay"         ;; Spesenabrechnung
+                "adminshare"})   ;; "200ok Sozialfaktor"
 
 
 (s/def ::date (s/or :date util/date?

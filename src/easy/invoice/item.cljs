@@ -85,10 +85,20 @@
        util/round-currency
        (assoc* item :amount)))
 
+
+(defn- add-amount-with-delcredere [item]
+  (->> item
+       :amount
+       (* 0.9)
+       util/round-currency
+       (assoc* item :amount-with-delcredere)))
+
+
 (defn transform [item]
   (-> item
       merge-defaults
       read-timesheet
       prepare-timesheet
       add-hours
-      add-amount))
+      add-amount
+      add-amount-with-delcredere))
