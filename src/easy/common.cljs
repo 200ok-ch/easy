@@ -60,8 +60,7 @@
 
 (defn ignore-warning? [evt key]
   (->> (get evt :ignore-warnings [])
-       (util/include? (name key))
-       not))
+       (util/include? (name key))))
 
 
 (defn harmonize [event]
