@@ -1,5 +1,6 @@
 (ns easy.expense
   (:require [cljs.spec.alpha :as s]
+            [cljs-time.format :as time]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.config :refer [config]]
@@ -58,6 +59,32 @@
        util/round-currency
        (assoc* evt :respect-tax-amount)))
 
+;; TODO refactor into a tax namespace, settlement has the same code
+;; TODO rewrite in a way that it does not need to be adjusted for
+;; every year
+(defn add-tax-period
+  "The tax-period is when the vat is due."
+  [evt]
+  (->> (let [date (-> evt :date)]
+         (cond
+           (and (>= date (time/parse "2017-06-01"))
+                (<= date (time/parse "2017-12-31")))
+           "2017-H2"
+           (and (>= date (time/parse "2018-01-01"))
+                (<= date (time/parse "2018-05-31")))
+           "2018-H1"
+           (and (>= date (time/parse "2018-06-01"))
+                (<= date (time/parse "2018-12-31")))
+           "2018-H2"
+           (and (>= date (time/parse "2019-01-01"))
+                (<= date (time/parse "2019-05-31")))
+           "2019-H1"
+           (and (>= date (time/parse "2019-06-01"))
+                (<= date (time/parse "2019-12-31")))
+           "2019-H2"
+           :else "Unknown"))
+       (assoc* evt :tax-period)))
+
 
 (defmethod transform :expense [_ event]
   (-> event
@@ -65,6 +92,7 @@
       common/add-iso-date
       add-respect-tax-rate
       add-respect-tax-amount
+      add-tax-period
       (assoc* :ledger-state "*") ;; always cleared
       (assoc* :ledger-template
               (get-in @config [:templates :ledger :expense]))
