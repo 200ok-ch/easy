@@ -31,8 +31,15 @@
                     :iso-string (s/and string? match-iso-date)))
 
 
+(s/def ::property string?)
+
+
+(s/def ::ignore-warnings (s/coll-of ::property))
+
+
 (s/def ::event (s/keys :req-un [::type
-                                ::date]))
+                                ::date]
+                       :opt-un [::ignore-warnings]))
 
 
 (s/def ::events (s/coll-of ::event))
@@ -49,6 +56,11 @@
       (assoc event field (js/Date. date))
       event)
     event))
+
+
+(defn ignore-warning? [evt key]
+  (->> (get evt :ignore-warnings [])
+       (util/include? (name key))))
 
 
 (defn harmonize [event]

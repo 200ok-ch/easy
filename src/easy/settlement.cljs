@@ -274,9 +274,10 @@
     (let [settlement-total (:net-total evt)
           invoice-total (->> evt :invoice :net-total)
           coverage (/ settlement-total invoice-total)]
-      (if (or (< coverage 0.98)
-              (> coverage 1.02))
-        (util/warn (str "Coverage " coverage " on settlement for " (:invoice-no evt))))
+      (if (and (not (common/ignore-warning? evt :coverage))
+               (or (< coverage 0.98)
+                   (> coverage 1.02)))
+        (util/warn (str "Coverage " coverage " on settlement for " (:invoice-no evt) " " (-> evt :invoice :description))))
       (assoc* evt :coverage coverage))
     evt))
 
