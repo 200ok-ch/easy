@@ -1,20 +1,27 @@
 (ns easy.outlay
+  "An *outlay* example:
+  ```
+  - type: outlay
+    description: Spesen 2018
+    beneficiary: Phil
+    date: 2018-12-31
+    amount: 2919.79
+    receipt: 10
+  ```"
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]))
 
-;; ------------------------------------------------------------
-;; spec
 
-;; required
+;; spec - required
 (s/def ::type #{"outlay"})
 (s/def ::date util/date?)
 (s/def ::amount float?)
 (s/def ::beneficiary string?)
 
-;; optional
+;; spec - optional
 (s/def ::description string?)
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::ledger-state #{"*"})
@@ -26,8 +33,9 @@
                                 ::beneficiary]
                        :opt-un [::description]))
 
-;; ------------------------------------------------------------
+
 ;; defaults
+
 
 (def defaults
   {})
@@ -35,8 +43,9 @@
 (def merge-defaults
   (partial merge defaults))
 
-;; ------------------------------------------------------------
-;; transformer
+
+;; transformers
+
 
 (defmethod transform :outlay [_ event]
   (-> event

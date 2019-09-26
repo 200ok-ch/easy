@@ -16,6 +16,7 @@
                   (-> event :type keyword)
                   ", in event "
                   (prn-str event)))
+  ;; TODO: use default transformation!
   event)
 
 

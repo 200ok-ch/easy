@@ -1,22 +1,26 @@
-;; TODO this is just a copy
-
 (ns easy.refund
+  "A *refund* example:
+  ```
+  - type: refund
+    date: 2018-08-22
+    description: Rückz. Direkte Bundesst. 2016
+    amount: 122.30
+    source: 8900-Direkte-Steuern
+  ```"
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]))
 
-;; ------------------------------------------------------------
-;; spec
 
-;; required
+;; spec - required
 (s/def ::type #{"refund"})
 (s/def ::date util/date?)
 (s/def ::amount float?)
 (s/def ::beneficiary string?)
 
-;; optional
+;; spec - optional
 (s/def ::description string?)
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::ledger-state #{"*"})
@@ -28,8 +32,9 @@
                        :opt-un [::description
                                 ::beneficiary]))
 
-;; ------------------------------------------------------------
+
 ;; defaults
+
 
 (def defaults
   {})
@@ -37,8 +42,9 @@
 (def merge-defaults
   (partial merge defaults))
 
-;; ------------------------------------------------------------
+
 ;; transformer
+
 
 (defmethod transform :refund [_ event]
   (-> event

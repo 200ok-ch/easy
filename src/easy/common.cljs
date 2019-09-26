@@ -6,66 +6,58 @@
             [cljs-time.format :as time]))
 
 
-;; spec
-
-
 (def match-iso-date (partial re-matches #"^\d{4}-\d\d-\d\d$"))
-
-
 (def match-template (partial re-matches #".*\.hbs"))
 
-
-(s/def ::type #{"plain"          ;; Allgemeine Buchung
-                "opening"        ;; Eröffnungsbilanz
-                "invoice"        ;; Rechnung wurde gestellt
-                "settlement"     ;; Rechnung wurde beglichen
-                "expense"        ;; Ausgabe
-                "refund"         ;; Rückerstattung
-                "reconciliation" ;; Ausgleichsbuchung
-                "salary"         ;; Gehalt
-                "outlay"         ;; Spesenabrechnung
-                "adminshare"})   ;; "200ok Sozialfaktor"
-
+;; NOTE: This is a set of all known event types. New event types need
+;; to be listed here otherwise they will result in an error. This is
+;; an early guard against typos in the name of event types -
+;; unfortunately not much more, so we might as well drop it entirely.
+(s/def ::type #{"plain"            ;; Allgemeine Buchung
+                "opening"          ;; Eröffnungsbilanz
+                "invoice"          ;; Rechnung wurde gestellt
+                "settlement"       ;; Rechnung wurde beglichen
+                "expense"          ;; Ausgabe
+                "refund"           ;; Rückerstattung
+                "reconciliation"   ;; Ausgleichsbuchung
+                "salary"           ;; Gehalt
+                "outlay"           ;; Spesenabrechnung
+                "redistribution"}) ;; "200ok Sozialfaktor"
 
 (s/def ::date (s/or :date util/date?
                     :iso-string (s/and string? match-iso-date)))
-
-
 (s/def ::property string?)
-
-
 (s/def ::ignore-warnings (s/coll-of ::property))
-
-
 (s/def ::event (s/keys :req-un [::type
                                 ::date]
                        :opt-un [::ignore-warnings]))
-
-
 (s/def ::events (s/coll-of ::event))
 
 
 ;; transformer
 
 
-(defn harmonize-date-field [field event]
-  (if-let [date (field event)]
+(defn harmonize-date-field [field evt]
+  (if-let [date (field evt)]
     (if (string? date)
       ;; NOTE don't use this, this does not return an instance of Date
-      ;; (assoc event field (time/parse util/iso-formatter date))
-      (assoc event field (js/Date. date))
-      event)
-    event))
+      ;; (assoc evt field (time/parse util/iso-formatter date))
+      (assoc evt field (js/Date. date))
+      evt)
+    evt))
 
 
-(defn ignore-warning? [evt key]
+(defn ignore-warning?
+  "Checks if `evt` has `:ignore-warnings` set for `key`."
+  [evt key]
   (->> (get evt :ignore-warnings [])
        (util/include? (name key))))
 
 
-(defn harmonize [event]
-  (->> event
+(defn harmonize [evt]
+  (->> evt
        (harmonize-date-field :date)
+       ;; TODO: remove, we don' use `:settled` anymore
        (harmonize-date-field :settled)))
 
 
@@ -75,9 +67,12 @@
   (util/validate! spec x))
 
 
-(defn add-iso-date [event]
-  (->> event
+(defn add-iso-date
+  "Transformer that takes the value of `:date`, builds an iso-date
+  string from it and assoc's it as `:iso-date`."
+  [evt]
+  (->> evt
        :date
        cljs-time/date-time
        (time/unparse util/iso-formatter)
-       (assoc* event :iso-date)))
+       (assoc* evt :iso-date)))

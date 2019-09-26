@@ -1,4 +1,12 @@
 (ns easy.settlement
+  "A *settlement* example:
+  ```
+  - type: settlement
+    description: Nick
+    date: 2018-02-01
+    invoice-no: 7.2.1
+    amount: 323.1
+  ```"
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
@@ -12,18 +20,16 @@
             [cljs-time.core :as cljs-time]
             [cljs-time.format :as time]))
 
-;; spec
 
 (def match-period (partial re-matches #"^\d{4}-(H|Q)\d$"))
 
-;; required
+;; spec - required
 (s/def ::type #{"settlement"})
 (s/def ::date util/date?)
 (s/def ::amount float?) ;; this should be equal to the invoice's gross-total
-
 (s/def ::items (s/coll-of ::item/item))
 
-;; optional
+;; spec - optional
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::tax-rate-in float?)
 (s/def ::tax-rate-out float?)
@@ -32,7 +38,7 @@
 (s/def ::tax-win float?)
 (s/def ::net-total float?)
 (s/def ::remaining float?)
-(s/def ::tax-period (s/and string? match-period))
+(s/def ::period (s/and string? match-period))
 (s/def ::ledger-template (s/and string? common/match-template))
 (s/def ::latex-template (s/and string? common/match-template))
 (s/def ::latex-content string?)
@@ -53,7 +59,7 @@
                                  ::tax-win
                                  ::net-total
                                  ::remaining
-                                 ::tax-period
+                                 ::period
                                  ::ledger-state
                                  ::ledger-template
                                  ::latex-template
@@ -75,10 +81,10 @@
   (partial merge defaults))
 
 
-;; transformer
+;; transformers
 
-;; TODO add doc strings to all functions
-;; TODO add pre conditions to all functions
+;; TODO: add doc strings to all functions
+;; TODO: add pre conditions to all functions
 
 
 (defn lookup-customer [{id :customer-id :as evt}]
@@ -115,31 +121,15 @@
     evt))
 
 
-;; TODO make the tax rate configurable via config
-(defn tax-rate-in [evt]
-  (if (< (-> evt :invoice :date)
-         (time/parse "2018-01-01"))
-    0.08
-    0.077))
-
-;; TODO make the tax rate configurable via config
-(defn tax-rate-out [evt]
-  (let [date (-> evt :invoice :date)]
-    (cond
-      ;; saldo pre 2018
-      (< date (time/parse "2018-01-01")) 0.061
-      ;; TODO maybe, because we switched to effective
-      ;; (> date (time/parse "2018-12-31")) 0.77
-      ;; saldo from 2018
-      :else 0.059)))
-
 (defn add-tax-rate-in [evt]
-  (->> (tax-rate-in evt)
+  (->> (tax/lookup-rate :vat-tax-rate-in evt)
        (assoc* evt :tax-rate-in)))
 
+
 (defn add-tax-rate-out [evt]
-  (->> (tax-rate-out evt)
+  (->> (tax/lookup-rate :vat-tax-rate-out evt)
        (assoc* evt :tax-rate-out)))
+
 
 (defn add-tax-in [evt]
   (->> (:net-total evt)
@@ -147,17 +137,20 @@
        util/round-currency
        (assoc* evt :tax-in)))
 
+
 (defn add-tax-out [evt]
   (->> (:net-total evt)
        (* (:tax-rate-out evt))
        util/round-currency
        (assoc* evt :tax-out)))
 
+
 (defn add-tax-win [evt]
   (->> (:tax-out evt)
        (- (:tax-in evt))
        util/round-currency
        (assoc* evt :tax-win)))
+
 
 (defn transform-items [evt]
   (update evt :items (partial map item/transform)))
@@ -170,32 +163,6 @@
        util/round-currency
        (assoc* evt :net-total)))
 
-
-
-;; TODO rewrite in a way that it does not need to be adjusted for
-;; every year
-(defn add-tax-period
-  "The tax-period is when the vat is due."
-  [evt]
-  (->> (let [date (-> evt :date)]
-         (cond
-           (and (>= date (time/parse "2017-06-01"))
-                (<= date (time/parse "2017-12-31")))
-           "2017-H2"
-           (and (>= date (time/parse "2018-01-01"))
-                (<= date (time/parse "2018-05-31")))
-           "2018-H1"
-           (and (>= date (time/parse "2018-06-01"))
-                (<= date (time/parse "2018-12-31")))
-           "2018-H2"
-           (and (>= date (time/parse "2019-01-01"))
-                (<= date (time/parse "2019-05-31")))
-           "2019-H1"
-           (and (>= date (time/parse "2019-06-01"))
-                (<= date (time/parse "2019-12-31")))
-           "2019-H2"
-           :else "Unknown"))
-       (assoc* evt :tax-period)))
 
 (defn add-templates [evt]
   (-> evt
@@ -226,7 +193,7 @@
          (assoc* evt :latex-filename))))
 
 
-;; TODO refactor everything so that latex has its own submap with
+;; TODO: refactor everything so that latex has its own submap with
 ;; content, path etc. so we can have a generic write! function which
 ;; takes a settlement (evt) and a key to the submap, see commented
 ;; function below.
@@ -234,7 +201,7 @@
                      filename :latex-filename
                      content :latex-content
                      :as evt}]
-  ;; TODO use some path join here
+  ;; TODO: use some path join here
   (-> (str directory "/" filename)
       (util/spit content))
   evt)
@@ -264,7 +231,7 @@
       write-latex!
       add-pdflatex-cmd
       run-pdflatex!
-      ;; TODO run xdg-open on the pdf file
+      ;; TODO: run xdg-open on the pdf file
       ))
 
 
@@ -319,7 +286,7 @@
       (assert-invoice! context)
       add-deferral
       common/add-iso-date
-      add-tax-period
+      add-period
       add-tax-rate-in
       add-tax-rate-out
       transform-items
