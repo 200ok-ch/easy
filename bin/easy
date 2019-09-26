@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# the classpath usually doesn't change, hence it can be cached, which
+# saves quite some time, because we don't need to fire up a jvm just
+# to establish a classpath
+
 BASEDIR=$(dirname "$0")/..
 
 KLASSPATHFILE=./.classpath
