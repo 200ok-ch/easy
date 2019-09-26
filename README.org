@@ -1,18 +1,51 @@
 * Welcome to EASY - Evented Accounting Sourced from Yaml
 
+** Introductions
+
 =easy= is a command line utility which generates artifacts typically
-used in accounting based on events provided as YAML files.
+used in accounting (but also other fields of business like invoicing)
+based on events provided as [[https://yaml.org/][YAML]] files.
 
-Each YAML file contains one or more events.
+** Overview
 
-Some of the fields are optional some are mandatory. See the Specs for details:
+In principle easy is used to transform the business events given in
+YAML into other business artifacts like invoices (PDF documents) or
+journal files for use with [[https://www.ledger-cli.org/][ledger]] (a command line utility for plain
+text accounting.) Processing of events happens in 5 steps:
+
+1. Read input events
+2. Check input events against spec
+3. Augment input events
+   3.1. Calculate drived values
+   3.2. Resolve related events
+4. Check augmented event against spec
+5. Render event(s) through templates
+
+** Inputs
+
+You can have as many YAML files as you want. Each YAML file contains
+one or more events. You are also free to categorize your YAML as you
+please. (E.g. We have one file for each customers invoices and a
+separate file for all settlements of the invcoices.)
+
+All events are spec'ed in [[https://clojure.org/guides/spec][Clojure Specs]]. Some of the fields are
+mandatory, some are optional. See the specs for details. Here are some
+example Specs:
 
 - [[src/easy/common.cljs][common]]
-  - [[src/easy/expense.cljs][expense]]
-  - [[src/easy/revenue.cljs][revenue]]
-    - [[src/easy/revenue/item.cljs][revenue item]]
+- [[src/easy/expense.cljs][expense]]
+- [[src/easy/revenue.cljs][revenue]]
+  - [[src/easy/revenue/item.cljs][revenue item]]
 
-** Example YAML file
+The easy code base is structured in a way that nested name spaces
+reflect the data structure that is used when writing events. (E.g. an
+event of type /revenue/ has a field /items/, the spec for items will
+be in the name space =revenue.item=.)
+
+*** Example
+
+This is what a typical easy YAML document with one event might look
+like.
 
 #+BEGIN_EXAMPLE
 ---
@@ -30,15 +63,23 @@ Some of the fields are optional some are mandatory. See the Specs for details:
       timesheet: path/to/timesheet.csv
 #+END_EXAMPLE
 
-** Setup
+** Install
 
-Easy runs on [[http://lumo-cljs.org/][lumo]] and uses node packages available via npm as well as
-ClojureScript packages available via clojars/maven.
+Easy runs on [[http://lumo-cljs.org/][lumo]] and uses node packages available via [[https://www.npmjs.com/][npm]], as well as
+ClojureScript packages available via [[https://clojars.org/][clojars]] (maven).
 
 Hence you will need to install the npm dependencies via =npm install=.
 
-ClojureScript dependencies are installed via a =deps.edn= and =clj=
-(aka. CLI). Please install =clj= as described [[https://clojure.org/guides/deps_and_cli][here]].
+ClojureScript dependencies tracked in =deps.edn= are installed via
+=clj= (aka. Clojure CLI). Please install =clj= as described [[https://clojure.org/guides/deps_and_cli][here]].
+
+Additionally [[https://github.com/kislyuk/yq][yq]] is like [[https://stedolan.github.io/jq/][jq]] for YAML, it is actually a wrapper around
+jq. It comes in really handy if working with multiple YAML files.
+
+#+BEGIN_SRC sh
+sudo apt install python-pip
+pip install yq
+#+END_SRC
 
 ** Usage
 
@@ -58,63 +99,7 @@ writing templates:
 
 =easy transform example.yml=
 
-** Semantics
-
-Throughout the code events should be called `evt`, instead of e.g.
-`invoice` or `settlement`. This is because its shorter, but mostly it
-makes copying or refactoring less error prone.
-
-| type       | path        | modus     |
-|------------+-------------+-----------|
-| settlement | date        | required  |
-|            | amount      | required  |
-|            | invoice-no  | required¹ |
-|            | customer-id | required¹ |
-|            | number      | required¹ |
-|            | version     | required¹ |
-|            | description | optional  |
-|            | iso-date    | derived   |
-|            |             |           |
-
-This is pseudo-YAML with the description of the property in place of
-its value.
-
-#+BEGIN_SRC yaml
-  # Eröffnungsbilanz
-  - type: opening
-
-  # Rechnung wurde gestellt
-  - type: invoice
-
-  # Rechnung wurde beglichen
-  - type: "settlement"
-    date: >-
-      The date of the money transfer.
-    amount: >-
-      The amount of money that has been transfered. It is expected to be
-      equal or (if rounded) close to the gross-total of the
-      corresponding invoice.
-    invoice-no: >-
-      The number of the corresponding invoice, which is usually also
-      given on the transfer details.
-
-  # Ausgabe/Aufwand
-  - type: expense
-
-  # Rückerstattung
-  - type: refund
-
-  # Ausgleichsbuchung
-  - type: reconciliation
-
-  # Gehalt
-  - type: salary
-
-  # Spesenabrechnung
-  - type: outlay
-#+END_SRC
-
-** On Transform and Resolve and how EASY avoids black holes
+** Resolve & Context
 
 Easy uses a multimethod =transform= to transform events into a
 /usable/ form. /Usable/ meaning it has all the details calculated and
@@ -132,22 +117,10 @@ Associated data is added via resolve-fns. The resolve-fns use the
 context to lookup other events. As the context contains only "mildy"
 and not fully transformed events the resolve-fn will very likely have
 to transform the resolved event in order to make it usable. If this
-would mean that another resolve-fn is triggere this will likely
+would mean that another resolve-fn is triggerd this will likely
 trigger an endless recursion of resolves.
 
 To prevent this from happening you have to adhere to the following
 conventions: (A) Resolve functions that receive =nil= as the =context=
 should return the event untouched. (B) When calling =transform= from a
-resolve-fn, allways pass =nil= as the =context=.
-
-** Notes
-
-#+BEGIN_SRC sh
-sudo apt install python-pip
-pip install yq
-#+END_SRC
-
-** TODOs
-
-*** write subcommand to generate a reconciliation event so that Aktiva::Joint is 0
-*** write subcommand to generate entries that share profit
+resolve-fn, always pass =nil= as the =context=.
