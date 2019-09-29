@@ -30,7 +30,7 @@
             easy.redistribution))
 
 
-;; commands
+;; (sub-)commands
 
 
 (defn ledger!

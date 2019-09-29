@@ -8,12 +8,13 @@
             [easy.salary.items :as items]))
 
 
-;; spec - required
+;; spec
+
+
 (s/def ::type #{"salary"})
 (s/def ::date util/date?)
 (s/def ::items (s/coll-of ::items/item))
 
-;; spec - optional
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::ledger-template (s/and string? common/match-template))
 
@@ -34,11 +35,11 @@
   (partial merge defaults))
 
 
-;; transformer
+;; transformers
 
 
-(defmethod transform :salary [_ event]
-  (-> event
+(defmethod transform :salary [_ evt]
+  (-> evt
       (common/validate! ::event)
       common/add-iso-date
       (assoc* :ledger-template

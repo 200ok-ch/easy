@@ -17,14 +17,15 @@
             [easy.transform :refer [transform]]))
 
 
-;; spec - required
+;; spec
+
+
 (s/def ::type #{"expense"})
 (s/def ::date util/date?)
 (s/def ::account string?)
 (s/def ::payer string?)
 (s/def ::amount float?)
 
-;; spec - optional
 (s/def ::description string?)
 (s/def ::ledger-template (s/and string? common/match-template))
 
@@ -64,8 +65,8 @@
        (assoc* evt :respect-tax-amount)))
 
 
-(defmethod transform :expense [_ event]
-  (-> event
+(defmethod transform :expense [_ evt]
+  (-> evt
       (common/validate! ::event)
       common/add-iso-date
       add-respect-tax-rate

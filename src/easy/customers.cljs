@@ -30,17 +30,18 @@
             [easy.config :refer [config]]))
 
 
+;; spec
+
+
 ;; NOTE: minimum 3 maximum 10 characters is a sensible limits for
 ;; customers' shortnames
 (def match-shortname (partial re-matches #"[a-z]{3,10}"))
 
-;; spec - required
 (s/def ::year pos-int?) ;; when they became a customer
 (s/def ::number pos-int?) ;; a unique customer number
 (s/def ::address string?) ;; multiline postal address
 (s/def ::shortname (s/and string? match-shortname))
 
-;; spec - optional
 (s/def ::discount (s/and float? #(>= % 0) #(< % 100))) ;; a general discount in percentage
 (s/def ::contact string?)
 (s/def ::rate float?) ;; the default hourly rate for a given customer

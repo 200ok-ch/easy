@@ -15,13 +15,14 @@
             [easy.transform :refer [transform]]))
 
 
-;; spec - required
+;; spec
+
+
 (s/def ::type #{"outlay"})
 (s/def ::date util/date?)
 (s/def ::amount float?)
 (s/def ::beneficiary string?)
 
-;; spec - optional
 (s/def ::description string?)
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::ledger-state #{"*"})
@@ -47,8 +48,8 @@
 ;; transformers
 
 
-(defmethod transform :outlay [_ event]
-  (-> event
+(defmethod transform :outlay [_ evt]
+  (-> evt
       (common/validate! ::event)
       common/add-iso-date
       (assoc* :ledger-state "*") ;; always cleared

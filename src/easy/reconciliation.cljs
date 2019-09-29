@@ -17,13 +17,14 @@
             [easy.transform :refer [transform]]))
 
 
-;; spec - required
+;; spec
+
+
 (s/def ::type #{"reconciliation"})
 (s/def ::date util/date?)
 (s/def ::amount float?)
 (s/def ::account string?)
 
-;; spec - optional
 (s/def ::description string?)
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::ledger-state #{"*"})
@@ -46,11 +47,11 @@
   (partial merge defaults))
 
 
-;; transformer
+;; transformers
 
 
-(defmethod transform :reconciliation [_ event]
-  (-> event
+(defmethod transform :reconciliation [_ evt]
+  (-> evt
       (common/validate! ::event)
       common/add-iso-date
       (assoc* :ledger-state "*") ;; always cleared

@@ -32,15 +32,16 @@
             [cljs-time.format :as time]))
 
 
+;; spec
+
+
 (def match-invoice-no (partial re-matches #"^\d+\.\d+\.\d+$"))
 (def match-period (partial re-matches #"^\d{4}-(H|Q)\d$"))
 
-;; spec - required
 (s/def ::type #{"invoice"})
 (s/def ::date util/date?)
 (s/def ::items (s/coll-of ::item/item))
 
-;; spec - optional
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::deadline pos-int?) ;; in days
 (s/def ::header string?)
@@ -108,12 +109,12 @@
 ;; TODO: add pre conditions to all functions
 
 
-(defn- lookup-customer [{id :customer-id :as event}]
+(defn- lookup-customer [{id :customer-id :as evt}]
   (->> @config
        :customers
        (filter #(= id (:number %)))
        first
-       (assoc* event :customer)))
+       (assoc* evt :customer)))
 
 
 (defn- resolve-settlement [{:keys [invoice-no] :as evt} ctx]
@@ -281,8 +282,8 @@
       ))
 
 
-(defmethod transform :invoice [context event]
-  (-> event
+(defmethod transform :invoice [context evt]
+  (-> evt
       (common/validate! ::event)
       merge-defaults
       lookup-customer

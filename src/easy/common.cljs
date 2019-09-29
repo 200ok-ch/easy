@@ -6,6 +6,9 @@
             [cljs-time.format :as time]))
 
 
+;; spec
+
+
 (def match-iso-date (partial re-matches #"^\d{4}-\d\d-\d\d$"))
 (def match-template (partial re-matches #".*\.hbs"))
 
@@ -34,7 +37,7 @@
 (s/def ::events (s/coll-of ::event))
 
 
-;; transformer
+;; helpers
 
 
 (defn harmonize-date-field [field evt]
@@ -65,6 +68,9 @@
   "Same as `util/validate!`, but with arguments swapped."
   [x spec]
   (util/validate! spec x))
+
+
+;; transformers
 
 
 (defn add-iso-date

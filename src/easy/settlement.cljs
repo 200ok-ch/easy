@@ -23,15 +23,16 @@
             [cljs-time.format :as time]))
 
 
+;; spec
+
+
 (def match-period (partial re-matches #"^\d{4}-(H|Q)\d$"))
 
-;; spec - required
 (s/def ::type #{"settlement"})
 (s/def ::date util/date?)
 (s/def ::amount float?) ;; this should be equal to the invoice's gross-total
 (s/def ::items (s/coll-of ::item/item))
 
-;; spec - optional
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::tax-rate-in float?)
 (s/def ::tax-rate-out float?)
@@ -272,8 +273,8 @@
 ;;
 ;; `context` can also be nil, this is the case if the event is
 ;; transformed while being resolved for another event
-(defmethod transform :settlement [context event]
-  (-> event
+(defmethod transform :settlement [context evt]
+  (-> evt
       (common/validate! ::event)
       merge-defaults
       lookup-customer

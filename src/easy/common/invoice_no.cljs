@@ -3,7 +3,9 @@
             [cljs.spec.alpha :as s]
             [easy.util :as util]))
 
+
 ;; spec
+
 
 (def match-invoice-no (partial re-matches #"^\d+\.\d+\.\d+$"))
 
@@ -18,7 +20,9 @@
                                             ::number
                                             ::version])))
 
-;; transform
+
+;; transformers
+
 
 (defn- add-invoice-no
   "Compile `invoice-no` from invoice details like `customer-id`,

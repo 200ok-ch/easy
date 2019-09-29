@@ -2,9 +2,9 @@
   (:require [easy.config :refer [config]]))
 
 
-(defn- unsettled-invoice [event]
-  (and (= "revenue" (:type event))
-       (nil? (:settled event))))
+(defn- unsettled-invoice [evt]
+  (and (= "revenue" (:type evt))
+       (nil? (:settled evt))))
 
 
 ;;(defn- accumulate-debt [customer event]

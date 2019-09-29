@@ -3,11 +3,12 @@
             [easy.util :as util :refer [assoc*]]))
 
 
-;; spec - required
+;; spec
+
+
 (s/def ::payer string?)
 (s/def ::amount float?)
 
-;; spec - optional
 (s/def ::redistribution-factor float?)
 (s/def ::redistribution-amount float?)
 

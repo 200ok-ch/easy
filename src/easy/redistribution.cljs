@@ -17,12 +17,13 @@
             [easy.redistribution.account :as account]))
 
 
-;; spec - required
+;; spec
+
+
 (s/def ::type #{"redistribution"})
 (s/def ::date util/date?)
 (s/def ::accounts (s/coll-of ::account/account))
 
-;; spec - optional
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::ledger-template (s/and string? common/match-template))
 
