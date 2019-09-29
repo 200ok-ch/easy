@@ -5,10 +5,11 @@
             [easy.config :as config :refer [config]]
             [easy.customers :as customers]
             [easy.templating :as templating]
-            [easy.transform :refer [transform]]
+            [easy.transform :refer [safe-transform]]
             [easy.overview :as overview]
             [easy.invoice :as invoice]
             [easy.common :as common]
+            [easy.log :as log]
             [easy.common.invoice-no :as invoice-no]
             [clojure.tools.cli :refer [parse-opts]]
             [cljs.pprint :refer [pprint]]
@@ -36,13 +37,11 @@
   "Transforms all events, renders and prints their ledger
   representation."
   [events options]
-  ;; TODO: use the context building with bin-by in every other
-  ;; subcommand as well
   (let [context (util/bin-by (comp keyword :type) events)]
     (->> events
          (map invoice-no/unify)
          ;; transform all events within the `context`
-         (map (partial transform context))
+         (map (partial safe-transform context))
          ;; filter to the events that belong to the year given with -y
          ;; TODO: do not filter when year is not given
          (filter #(.startsWith (:iso-date %) (:year options)))
@@ -54,15 +53,16 @@
 (defn invoice!
   "Generates an invoice PDF and prints a report."
   [events options]
-  (->> events
-       (filter #(= "invoice" (:type %)))
-       (map invoice/add-invoice-no)
-       (filter #(= (:invoice-no %) (:no options)))
-       first
-       (transform events)
-       invoice/transform-latex!
-       templating/render-report
-       println))
+  (let [context (util/bin-by (comp keyword :type) events)]
+    (->> events
+         (filter #(= "invoice" (:type %)))
+         (map invoice/add-invoice-no)
+         (filter #(= (:invoice-no %) (:no options)))
+         first
+         (safe-transform context)
+         invoice/transform-latex!
+         templating/render-report
+         println)))
 
 
 (defn transform!
@@ -70,7 +70,7 @@
   [events options]
   (let [context (util/bin-by (comp keyword :type) events)]
     (->> events
-         (map (partial transform context))
+         (map (partial safe-transform context))
          pprint)))
 
 
@@ -81,20 +81,23 @@
 
 
 (defn validate!
-  "Validates all input events and exits."
+  "Validates all input events and exits. Good to check for warnings."
   [events options]
-  (->> events
-       (map (partial transform events))))
+  (let [context (util/bin-by (comp keyword :type) events)]
+    (->> events
+         (map (partial safe-transform context))
+         doall)))
 
 
 (defn overview!
   "Renders an overview."
   [events options]
-  (->> events
-       (map (partial transform events))
-       overview/crunch-numbers
-       templating/render-overview
-       println))
+  (let [context (util/bin-by (comp keyword :type) events)]
+    (->> events
+         (map (partial safe-transform context))
+         overview/crunch-numbers
+         templating/render-overview
+         println)))
 
 
 ;; main
@@ -141,7 +144,8 @@
 
 
 (def cli-options
-  [["-i" "--input INPUT" "Input file"]
+  [["-d" "--debug" "Debug output"]
+   ["-i" "--input INPUT" "Input file"]
    ["-y" "--year NUMBER" "Year"]
    ["-n" "--no NUMBER" "Invoice No"]])
 

@@ -2,7 +2,8 @@
   "The transform function is no only a multimethod but also
   overloaded (i.e. has multiple arities). Transform has to has its own
   namespace to avoid cyclic dependencies."
-  (:require [easy.util :as util]))
+  (:require [easy.util :as util]
+            [easy.config :refer [config]]))
 
 
 (defmulti transform
@@ -23,3 +24,16 @@
 ;; silently ignoring transformation of nil
 (defmethod transform nil [_ _]
   nil)
+
+
+(defn safe-transform [ctx evt]
+  (if (-> @config :options :options :debug)
+    (prn (str "TRANSFORM " (:type evt))))
+  (try
+    (transform ctx evt)
+    (catch :default e
+      (util/warn (str "Transform failed with `"
+                      e "` on\n\n" (util/write-yaml evt)
+                      "\n" (.-stack e)))
+      (process.exit 1) ;; halt on error
+      evt)))

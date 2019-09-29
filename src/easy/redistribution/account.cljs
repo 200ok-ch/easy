@@ -40,8 +40,7 @@
 
 (defn- add-redistribution-factor
   [account {:keys [redistribution-factor] :or {redistribution-factor 0.1}}]
-  (--> account
-       (assoc* :redistribution-factor redistribution-factor)))
+  (assoc* account :redistribution-factor redistribution-factor))
 
 
 (defn- add-redistribution-amount [account]

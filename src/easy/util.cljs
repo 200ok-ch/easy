@@ -6,7 +6,8 @@
             ["js-yaml" :as yaml]
             ["sync-exec" :as exec]
             ["sprintf-js" :refer [sprintf]]
-            [cljs-time.format :as time]))
+            [cljs-time.format :as time]
+            [clojure.string :as str]))
 
 
 (defn bin-by
@@ -25,7 +26,6 @@
       (replace "_" " ") ;; FIXME this is a hack
       (replace "#" "\\#")
       (replace "&" "\\&")))
-
 
 (defn warn [msg]
   (.error js/console (clj->js msg))
@@ -53,6 +53,20 @@
   {:pre [(string? path)
          (string? content)]}
   (.writeFileSync fs path content))
+
+
+(defn indent
+  "Indents a multiline string `s` by `n` spaces."
+  [s n]
+  (let [i (apply str (repeat n " "))]
+    (str i (str/replace s "\n" (str "\n" i)))))
+
+
+(defn write-yaml [x]
+  (-> x
+      clj->js
+      yaml/safeDump
+      (indent 2)))
 
 
 (defn parse-yaml [string]
@@ -119,3 +133,8 @@
 
 (defn exit [c]
   (.exit js/process (or c 0)))
+
+
+(defn die [s]
+  (warn s)
+  (exit 1))

@@ -9,11 +9,13 @@
   ```"
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
+            [easy.log :as log]
             [easy.common :as common]
+            [easy.common.tax :as tax]
             [easy.common.invoice-no :as invoice-no]
             [easy.templating :as templating]
             [easy.config :refer [config]]
-            [easy.transform :refer [transform]]
+            [easy.transform :refer [transform safe-transform]]
             [easy.settlement.item :as item]
             [easy.customers :as customers]
             [clojure.string :refer [join replace split]]
@@ -101,7 +103,7 @@
     (->> context
          (filter #(= invoice-no (:invoice-no %)))
          first
-         (transform nil)
+         (safe-transform nil)
          (assoc* evt :invoice))))
 
 
@@ -273,6 +275,7 @@
 (defn add-debug [evt]
   (assoc* evt :debug (prn-str evt)))
 
+
 ;; `context` can be a map of types and vectors of events
 ;;
 ;; `context` can also be nil, this is the case if the event is
@@ -286,7 +289,7 @@
       (assert-invoice! context)
       add-deferral
       common/add-iso-date
-      add-period
+      tax/add-period
       add-tax-rate-in
       add-tax-rate-out
       transform-items

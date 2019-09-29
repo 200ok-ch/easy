@@ -103,6 +103,6 @@
        util/slurp
        util/parse-yaml
        (util/validate! ::customers)
-       merge-defaults
+       (map merge-defaults)
        (map transform)
        (util/validate! ::customers)))

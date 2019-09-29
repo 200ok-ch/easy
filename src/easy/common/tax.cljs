@@ -2,6 +2,7 @@
   (:require [cljs.spec.alpha :as s]
             [easy.config :refer [config]]
             [easy.util :as util :refer [assoc*]]
+            [easy.log :as log]
             [easy.common :as common]))
 
 
@@ -16,21 +17,34 @@
                             :opt-un [::since
                                      ::until]))
 
-(s/def ::rates (s/coll-of ::rate-entry))
+(s/def ::rates (s/coll-of ::rate-entry :kind vector?))
 
 
 ;; helpers
+
+
+(defn- assert-exactly-one [coll]
+  (case (count coll)
+    ;; non found -> abort
+    0 (util/die "Collection with one expected entry found empty!")
+    ;; all good
+    1 (first coll)
+    ;; else (more than 1)
+    (do
+      (util/warn (str "Found more than one entry in collection, "
+                      "when exactly one was expected. "
+                      "Just picked the first from " coll))
+      (first coll))))
 
 
 (defn lookup-rate
   [key {:keys [date]}]
   (->> @config
        key
-       (common/validate! ::rates)
+       ;; TODO: use `(common/validate! ::rates)` here
        (filter #(or (nil? (:since %)) (>= date (:since %))))
        (filter #(or (nil? (:until %)) (<= date (:until %))))
-       ;; TODO: assert-exactly-one!
-       first
+       assert-exactly-one
        :rate))
 
 
@@ -44,4 +58,4 @@
         year (.getFullYear date)
         semester (if (< (.getMonth date) 6) 1 2)
         period (str year "-H" semester)]
-    (assoc* evt :period)))
+    (assoc* evt :period period)))

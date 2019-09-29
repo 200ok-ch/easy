@@ -18,12 +18,13 @@
   ```"
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
+            [easy.log :as log]
             [easy.common :as common]
             [easy.common.invoice-no :as invoice-no]
             [easy.common.tax :as tax]
             [easy.templating :as templating]
             [easy.config :refer [config]]
-            [easy.transform :refer [transform]]
+            [easy.transform :refer [transform safe-transform]]
             [easy.invoice.item :as item]
             [easy.customers :as customers]
             [clojure.string :refer [join replace split]]
@@ -121,7 +122,7 @@
     (->> ctx
          (filter #(= invoice-no (:invoice-no %)))
          first
-         (transform nil)
+         (safe-transform nil)
          (assoc* evt :settlement))))
 
 
