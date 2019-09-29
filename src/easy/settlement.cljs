@@ -102,7 +102,7 @@
     evt
     (->> context
          (filter #(= invoice-no (:invoice-no %)))
-         first
+         first ;; TODO: assert-exactly-one
          (safe-transform nil)
          (assoc* evt :invoice))))
 
@@ -123,26 +123,16 @@
     evt))
 
 
-(defn add-tax-rate-in [evt]
-  (->> (tax/lookup-rate :vat-tax-rate-in evt)
-       (assoc* evt :tax-rate-in)))
-
-
-(defn add-tax-rate-out [evt]
-  (->> (tax/lookup-rate :vat-tax-rate-out evt)
-       (assoc* evt :tax-rate-out)))
-
-
 (defn add-tax-in [evt]
   (->> (:net-total evt)
-       (* (:tax-rate-in evt))
+       (* (-> evt :invoice :tax-rate-in))
        util/round-currency
        (assoc* evt :tax-in)))
 
 
 (defn add-tax-out [evt]
   (->> (:net-total evt)
-       (* (:tax-rate-out evt))
+       (* (-> evt :invoice :tax-rate-out))
        util/round-currency
        (assoc* evt :tax-out)))
 
@@ -240,13 +230,15 @@
 ;; this can only be calculated if invoice is already resolved
 (defn add-coverage [evt]
   (if (:invoice evt)
-    (let [settlement-total (:net-total evt)
-          invoice-total (->> evt :invoice :net-total)
-          coverage (/ settlement-total invoice-total)]
+    (let [settlement-total (:amount evt) ;; gross-total
+          invoice-total (-> evt :invoice :gross-total)
+          coverage (/ settlement-total invoice-total)
+          tolerance (-> @config :coverage-tolerance)]
       (if (and (not (common/ignore-warning? evt :coverage))
-               (or (< coverage 0.98)
-                   (> coverage 1.02)))
-        (util/warn (str "Coverage " coverage " on settlement for " (:invoice-no evt) " " (-> evt :invoice :description))))
+               (or (< coverage (- 1 tolerance))
+                   (> coverage (+ 1 tolerance))))
+        (util/warn (str "Coverage " coverage " on settlement for "
+                        (:invoice-no evt) " " (-> evt :invoice :description))))
       (assoc* evt :coverage coverage))
     evt))
 
@@ -290,8 +282,6 @@
       add-deferral
       common/add-iso-date
       tax/add-period
-      add-tax-rate-in
-      add-tax-rate-out
       transform-items
       add-net-total
       add-coverage

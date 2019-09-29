@@ -53,9 +53,12 @@
 
 (defn add-period
   "The period is when the vat is due."
-  [evt]
-  (let [date (-> evt :date)
-        year (.getFullYear date)
-        semester (if (< (.getMonth date) 6) 1 2)
-        period (str year "-H" semester)]
-    (assoc* evt :period period)))
+  ([evt] (add-period evt [:date]))
+  ([evt date-path]
+   (if-let [date (get-in evt date-path)]
+     (let [year (.getFullYear date)
+           semester (if (< (.getMonth date) 6) 1 2)
+           period (str year "-H" semester)]
+       (assoc* evt :period period))
+     ;; no date found, in context of a nested transform, that's ok
+     evt)))

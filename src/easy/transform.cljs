@@ -28,7 +28,8 @@
 
 (defn safe-transform [ctx evt]
   (if (-> @config :options :options :debug)
-    (prn (str "TRANSFORM " (:type evt))))
+    (println (str "------------------------------" "TRANSFORM " (:type evt) "\n"
+                  (util/indent (util/write-yaml evt) 2))))
   (try
     (transform ctx evt)
     (catch :default e
