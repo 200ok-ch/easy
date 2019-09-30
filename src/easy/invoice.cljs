@@ -205,6 +205,12 @@
               (get-in @config [:templates :ledger :invoice]))))
 
 
+(defn add-texinputs-directory [evt]
+  (->> (get-in @config [:texinputs-directory])
+       (str (process.cwd) "/") ;; TODO: make this less horrible
+       (assoc* evt :texinputs-directory)))
+
+
 (defn order-items-by-amount [evt]
   (merge evt
          {:items (reverse (sort-by :amount (:items evt)))}))
@@ -244,6 +250,7 @@
                      filename :latex-filename
                      content :latex-content
                      :as evt}]
+  (util/sh "mkdir -p" directory)
   ;; TODO: use some path join here
   (-> (str directory "/" filename)
       (util/spit content))
@@ -256,10 +263,14 @@
 ;;        (apply util/spit)))
 
 
-(defn add-pdflatex-cmd [{directory :latex-directory
-                         filename :latex-filename
-                         :as evt}]
-  (->> (str "(cd " directory " && pdflatex " filename ")")
+(defn add-pdflatex-cmd
+  [{:keys [latex-directory
+           latex-filename
+           texinputs-directory]
+    :as evt}]
+  (->> (str "(cd " latex-directory
+            " && TEXINPUTS=.:" texinputs-directory ":"
+            " pdflatex " latex-filename ")")
        (assoc* evt :pdflatex-cmd)))
 
 
@@ -269,6 +280,8 @@
   evt)
 
 
+;; TODO: why use a different transform here, this should move into the
+;; main transform, except for write-latex! and run-pdflatex!
 (defn transform-latex! [evt]
   (-> evt
       order-items-by-amount
@@ -276,6 +289,7 @@
       add-latex-directory
       add-latex-filename
       write-latex!
+      add-texinputs-directory
       add-pdflatex-cmd
       run-pdflatex!
       ;; TODO: run xdg-open on the pdf file

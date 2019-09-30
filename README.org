@@ -65,13 +65,25 @@ like.
 
 ** Install
 
+*** lumo via npm
+
 Easy runs on [[http://lumo-cljs.org/][lumo]] and uses node packages available via [[https://www.npmjs.com/][npm]], as well as
 ClojureScript packages available via [[https://clojars.org/][clojars]] (maven).
 
 Hence you will need to install the npm dependencies via =npm install=.
 
+*** clojars via Clojure's CLI
+
 ClojureScript dependencies tracked in =deps.edn= are installed via
 =clj= (aka. Clojure CLI). Please install =clj= as described [[https://clojure.org/guides/deps_and_cli][here]].
+
+*** Debian packages
+
+To render invcoice via latex you need to have at least the follwoing
+packages installed (Debian naming):
+
+- texlive-latex-base
+- texlive-latex-recommended
 
 ** Usage
 
@@ -86,11 +98,11 @@ the example directory of this repo and to run these examples.
 Render ledger entries from events and run the through ledger to create
 a balance:
 
-=easy ledger -i example.yml | ledger bal -f -=
+=easy ledger -i events/invoices.yml | ledger bal -f -=
 
 Render invoice 18.2.1 to latex:
 
-=easy invoice -i example.yml -n 18.2.1=
+=easy invoice -i events/invoices.yml -n 1.1.1=
 
 Sidenote: Easy invoice identifiers (invoice-no) are divided into three
 segments ~<customer-id>.<invoice-number>.<version>~. In events thei
@@ -100,20 +112,20 @@ can be given as =invoice-no= in aggregated form or separately as
 Run a transform to see the transformed events, which is handy for
 writing templates:
 
-=easy transform -i example.yml=
+=easy transform -i events/invoices.yml=
 
 Or, just validate the input and exit:
 
-=easy validate -i example.yml=
+=easy validate -i events/invoices.yml=
 
 Easy alternatively takes events via STDIN:
 
-=cat example.yml | easy transform=
+=cat events/invoices.yml | easy transform=
 
 This comes in particularly handy, when working with multiple event
 sources (i.e. YAML files)
 
-=cat invoices.yml settlements.yml | easy ledger | ledger -f - bal=
+=cat events/*.yml | easy ledger | ledger -f - bal=
 
 (Please be ware that concatinating YAML files for easy only works if
 the files lack the YAML's document prefix =---=. The reason for this
@@ -126,9 +138,9 @@ it will find all files matching =*.yml=, load these, annotate each
 event with its origin (for locating issues quickly), and outputs a
 sorted stream of events.
 
-=collect ./events/ | easy ledger -y 2018=
+=collect events | easy ledger -y 2019=
 
-Yes, you guessed it, you can use `-y <year>` to filter events by year.
+Yes, you guessed it, you can use =-y <year>= to filter events by year.
 
 ** On Frontmatter Templates
 

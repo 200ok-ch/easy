@@ -1,0 +1,16 @@
+---
+# - `name` is used for the path to store files associated with a
+# customer.
+# - `year` is the year the customer received its first invoice.
+# - `number` is a running sequence.
+# - `contact` is the primary contact for the given customer
+# and is used to select a preset for the invoices.
+
+- name: schaf
+  year: 2019
+  number: 1
+  address: |
+    Familie Schaf
+    Auf der grünen Weide 1
+    54321 Schäferhausen
+  contact: info

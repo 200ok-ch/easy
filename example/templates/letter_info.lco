@@ -1,0 +1,76 @@
+\ProvidesFile{brief.lco}[2002/07/09 v0.9a LaTeX2e unsupported letter-class-option]
+
+\usepackage{graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+\usepackage{lmodern}
+\usepackage{tabularx}
+
+\setkomavar{fromname}{Hausverwaltung Raffzahn GmbH}
+\newcommand\addrsecrow{}
+\newcommand\rechtsform{}
+\setkomavar{fromaddress}{Abzocker-Str. 666\\XX-12345 Fassohneboden}
+%\setkomavar{fromphone}{Tel: +1 555 555 55 55}
+\setkomavar{fromfax}{}
+\setkomavar{fromemail}{info@example.com}
+%\setkomavar{signature}{}
+\newcommand\ustid{XXX-666.666.666 MWST}
+\setkomavar{frombank}{Bankverbindung\\
+  Finanzkrisebank\\
+  %Bankenclearing-Nr. (BC-Nr.) ???\\
+  Bankkonto-Nr. 66-666666-6\\
+  IBAN XX66 0000 0000 0000 6666 6
+}
+%\KOMAoptions{fromlogo=true}
+%\setkomavar{fromlogo}{\includegraphics[width=5in,height=1cm]{200ok_logo.png}}
+
+%\pagestyle{myheadings}
+%\@addtoplength{firstfootvpos}{1mm}
+%\@setplength{firstheadvpos}{12mm}
+%\addtolength{\textheight}{15mm}
+\@addtoplength{firstfootvpos}{-8mm}
+
+\setkomafont{backaddress}{\scriptsize}
+\typeout{\scdefault}
+\DeclareFixedFont{\fa}{\encodingdefault}{cmr}{m}{\scdefault}{8}
+\DeclareFixedFont{\cc}{\encodingdefault}{cmr}{m}{\scdefault}{30}
+
+\firsthead{\hfill Logo}
+
+\firstfoot{
+  \scriptsize{
+    \parbox{\useplength{firstfootwidth}}{
+      \rule{170mm}{0.5pt}
+      \begin{tabular}{ll}
+	      \usekomavar{fromname}\\
+        %\rechtsform\\
+	      \usekomavar{fromaddress}\\
+	    \end{tabular}\hfill
+      \begin{tabular}{cc}
+	      \usekomavar{fromemail}\\
+	      \usekomavar{fromphone}\\
+	      \usekomavar{fromfax}\\
+	      \ustid
+      \end{tabular}\hfill
+      \begin{tabular}{rr}
+	      \usekomavar{frombank}\\
+	    \end{tabular}
+  }}
+}
+
+\nextfoot{
+  \parbox{\useplength{firstfootwidth}}{
+    \begin{tabular}{ll}
+		  \usekomavar{fromname}
+	  \end{tabular}\hfill
+	  \begin{tabular}{cc}
+		  \today
+	  \end{tabular}\hfill
+	  \begin{tabular}{rr}
+		  \thepage
+	  \end{tabular}
+  }
+}
+
+\endinput

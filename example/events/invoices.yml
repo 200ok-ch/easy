@@ -1,0 +1,13 @@
+- type: invoice
+  date: 2019-01-18
+  description: "Interne Beschreibung"
+  invoice-no: 1.1.1
+  items:
+  - rate: 200.0
+    hours: 8.0
+    beneficiary: Coworker1
+  header: >-
+    Bitte zahlt bald!
+  footer: >-
+    Uns geht das Geld aus.
+  deadline: 14

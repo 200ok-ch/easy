@@ -1,0 +1,5 @@
+- type: settlement
+  date: 2019-02-18
+  description: Interne Beschreibung
+  invoice-no: 1.1.1
+  amount: 1723.20

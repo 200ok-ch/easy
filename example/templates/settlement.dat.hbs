@@ -1,0 +1,33 @@
+; -*- mode: ledger -*-
+; «utf8», file: {{ledger-template}}
+
+{{iso-date}} * ({{uuid}}) < R-{{invoice-no}} {{invoice/description}}
+    Aktiva:1100-Forderungen-aus-Lieferungen-und-Leistungen
+    Aktiva:1010-Postfinance  {{amount}}
+    (ProfitCenter:Eingang)  {{amount}}
+
+{{iso-date}} * ({{uuid}}) R-{{invoice-no}} {{invoice/description}}
+    Passiva:2201-Abrechnungskonto-MWST:{{period}}:MWST
+    Ertrag:3809-Saldosteuer  {{tax-out}}
+
+{{iso-date}} * ({{uuid}}) Verbindlichkeit Mwst
+    [ProfitCenter:Eingang]
+    [ProfitCenter:Steuer]  {{tax-out}}
+
+{{#if tax-win}}
+{{iso-date}} * ({{uuid}}) Profit d. Saldoverfahren
+    [ProfitCenter:Eingang]
+    [ProfitCenter:Research]  {{tax-win}}
+{{/if}}
+
+{{#each distribution}}
+{{../iso-date}} * ({{uuid}}) R-{{../invoice-no}}/{{beneficiary}} ({{hours}}x{{rate}})
+    [ProfitCenter:Eingang]
+    [ProfitCenter:{{beneficiary}}]  {{amount}}
+
+{{/each}}
+{{#if remaining}}
+{{iso-date}} * ({{uuid}}) Abweichung R-{{invoice-no}}
+    Aktiva:1100-Forderungen-aus-Lieferungen-und-Leistungen
+    Ertrag:3800-Verluste-Forderungen  {{remaining}}
+{{/if}}
