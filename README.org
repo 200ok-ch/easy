@@ -1,6 +1,6 @@
 * Welcome to EASY - Evented Accounting Sourced from Yaml
 
-** Introductions
+** Introduction
 
 =easy= is a command line utility which generates artifacts typically
 used in accounting (but also other fields of business like invoicing)
@@ -8,7 +8,7 @@ based on events provided as [[https://yaml.org/][YAML]] files.
 
 ** Overview
 
-In principle easy is used to transform the business events given in
+In principle =easy= is used to transform the business events given in
 YAML into other business artifacts like invoices (PDF documents) or
 journal files for use with [[https://www.ledger-cli.org/][ledger]] (a command line utility for plain
 text accounting.) Processing of events happens in 5 steps:
@@ -16,7 +16,7 @@ text accounting.) Processing of events happens in 5 steps:
 1. Read input events
 2. Check input events against spec
 3. Augment input events
-   3.1. Calculate drived values
+   3.1. Calculate derived values
    3.2. Resolve related events
 4. Check augmented event against spec
 5. Render event(s) through templates

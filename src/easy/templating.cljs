@@ -16,9 +16,9 @@
 
 ;; TODO: don't read and parse the same template over and over again
 (defn- apply-template [template-key event]
-  ;; (println (:type event))
+  ;; (println (:type event) " " (:source event))
   (let [path (template-key event)
-        ;; _ (println path)
+        ;; _ (println "hello" path)
         source (util/slurp path)
         renderer (hbs/compile source)]
     (renderer (clj->js event))))

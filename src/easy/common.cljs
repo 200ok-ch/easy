@@ -40,16 +40,6 @@
 ;; helpers
 
 
-(defn harmonize-date-field [field evt]
-  (if-let [date (field evt)]
-    (if (string? date)
-      ;; NOTE don't use this, this does not return an instance of Date
-      ;; (assoc evt field (time/parse util/iso-formatter date))
-      (assoc evt field (js/Date. date))
-      evt)
-    evt))
-
-
 (defn ignore-warning?
   "Checks if `evt` has `:ignore-warnings` set for `key`."
   [evt key]
@@ -59,9 +49,9 @@
 
 (defn harmonize [evt]
   (->> evt
-       (harmonize-date-field :date)
+       (util/harmonize-date-field :date)
        ;; TODO: remove, we don' use `:settled` anymore
-       (harmonize-date-field :settled)))
+       (util/harmonize-date-field :settled)))
 
 
 (defn validate!

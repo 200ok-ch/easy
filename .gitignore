@@ -1,2 +1,4 @@
 /.cpcache
 /node_modules
+/.classpath
+/.lumo_cache/
