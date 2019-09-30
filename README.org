@@ -1,6 +1,6 @@
 * Welcome to EASY - Evented Accounting Sourced from Yaml
 
-[[./img/easy_logo.png]]
+[[./easy_logo.png]]
 
 ** Introduction
 
