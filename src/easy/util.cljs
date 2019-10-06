@@ -41,6 +41,14 @@
   (last args))
 
 
+(defn file-exists? [path]
+  (try
+    (.isFile (.statSync fs path))
+    (catch :default e
+      ;; TODO: output an error message here?
+      false)))
+
+
 (defn slurp [path]
   {:pre [(string? path)]}
   (try
@@ -169,6 +177,7 @@
   [spec x]
   (if-not (s/valid? spec x)
     (do
+      (println (write-yaml x))
       (s/explain spec x)
       (process.exit 1))
     x))

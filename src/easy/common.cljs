@@ -31,9 +31,11 @@
                     :iso-string (s/and string? match-iso-date)))
 (s/def ::property string?)
 (s/def ::ignore-warnings (s/coll-of ::property))
+(s/def ::file util/file-exists?)
 (s/def ::event (s/keys :req-un [::type
                                 ::date]
-                       :opt-un [::ignore-warnings]))
+                       :opt-un [::ignore-warnings
+                                ::file]))
 (s/def ::events (s/coll-of ::event))
 
 
