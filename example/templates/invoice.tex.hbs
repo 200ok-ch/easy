@@ -1,0 +1,78 @@
+\documentclass[letter_{{customer.contact}}]{scrlttr2}
+
+\setkomavar{yourref}{}
+\setkomavar{yourmail}{}
+\setkomavar{myref}{}
+\setkomavar{customer}{ {{~customer.year-number~}} }
+\setkomavar{invoice}{ {{~invoice-no~}} }
+%\setkomavar{specialmail}{Einschreiben}
+
+\setkomavar{date}{ {{~iso-date~}} }
+\setkomavar{subject}{Rechnung}
+
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+\begin{letter}
+  { {{~customer.address-for-latex~}} }
+  \opening{}
+
+  {{#if header}}{{{header}}}\bigskip{{/if}}
+
+  {
+    \renewcommand{\arraystretch}{1}
+    \begin{tabularx}{\textwidth}{rlXlr}
+      Nr. & Datum & Leistung & Einheit & Betrag\\
+      \hline
+      \hline
+      {{#each items}}
+        {{add @index 1}} &
+        {{../iso-date}} &
+        Beratung {{beneficiary}} ({{rate}} CHF/Std.) &
+        {{hours}} Std. &
+        CHF {{toFixed amount 2}}\\
+      {{/each}}
+      \hline
+      & & Summe & & CHF {{toFixed net-total 2}}\\
+      {{#if discount}}
+        & & Rabatt & {{discount}}\% & CHF -{{toFixed discount-amount 2}}\\
+        & & Zwischensumme & & CHF {{toFixed sub-total 2}}\\
+      {{/if}}
+      & & MwSt Betrag & {{multiply tax-rate-in 100}}\% & CHF {{toFixed tax-in 2}} \\
+      \hline
+      & & \textbf{Rechnungstotal} & & \textbf{CHF {{toFixed gross-total 2 ~}} }\\
+    \end{tabularx}
+  }
+
+  \vspace{5mm}
+  Zahlungsfrist: {{deadline}} Tage
+  \vspace{5mm}
+
+  {{{footer}}}
+
+  {{#each items}}
+    {{#if timesheet-prepared}}
+      \begin{minipage}{\textwidth}
+        \textbf{Beratung {{beneficiary~}} }
+        \begin{center}
+          \begin{tabularx}{\textwidth}{rXr}
+            Datum & Beschreibung & Std.\\
+            \hline
+            {{#each timesheet-prepared}}
+              {{./date}} &
+              {{{description}}} &
+              {{duration}}\\
+            {{/each}}
+            \hline
+            & Gesamt & {{sum-hours}}\\
+          \end{tabularx}
+          \quad\vspace{1cm}
+        \end{center}
+      \end{minipage}
+    {{/if}}
+  {{/each}}
+
+  \closing{Mit freundlichen Grüssen}
+\end{letter}
+\end{document}

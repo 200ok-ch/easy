@@ -15,4 +15,4 @@ fi
 KLASSPATH=$(cat $KLASSPATHFILE)
 export NODE_PATH=$BASEDIR/node_modules
 
-exec $BASEDIR/node_modules/.bin/lumo -K -c "$KLASSPATH" -m easy.core $@
+exec $BASEDIR/node_modules/.bin/lumo -K -c "$KLASSPATH" -m easy.collect $@

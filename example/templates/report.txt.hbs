@@ -1,0 +1,32 @@
+
+Easy generated invoice: {{invoice-no}}
+
+DETAILS
+
+  Customer name:    {{customer.name}}
+  Customer number:  {{customer.year-number}}
+  Customer contact: {{customer.contact}}
+
+  Invoice date:     {{iso-date}}
+  Period:           {{period}}
+  Payment deadline: {{deadline}}
+  {{#if items}}
+
+  Items
+  {{#each items}}
+  {{hours}}h x {{rate}} CHF/h {{beneficiary}} CHF {{amount}}
+  {{/each}}
+  {{/if}}
+
+  Net total:        CHF {{net-total}}
+  Tax (Incoming):   CHF {{tax-in}}
+  Gross total:      CHF {{gross-total}}
+
+ARTIFACTS
+
+  TEX: {{latex-directory}}/{{latex-filename}}
+  PDF: {{latex-directory}}/{{replace latex-filename ".tex" ".pdf"}}
+
+COMMANDS
+
+  {{{pdflatex-cmd}}}

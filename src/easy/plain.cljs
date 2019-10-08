@@ -1,4 +1,15 @@
 (ns easy.plain
+  "A plain event is the most generic kind of booking.
+
+  A *plain* example:
+  ```
+  - type: plain
+    date: 2018-12-31
+    source: Aufwand:6799-Durchlaufkonto-Spesen
+    target: Aufwand:6000-Raumaufwand
+    amount: 49.95
+    description: Spesen-Sammelbuchung Miete
+  ```"
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
@@ -9,27 +20,23 @@
 ;; spec
 
 
-;; required
 (s/def ::type #{"plain"})
 (s/def ::date util/date?)
-(s/def ::amount float?)
 (s/def ::source string?)
 (s/def ::target string?)
+(s/def ::amount float?)
 
-
-;; optional
 (s/def ::description string?)
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::ledger-template (s/and string? common/match-template))
 
-
 (s/def ::event (s/keys :req-un [::type
                                 ::date
-                                ::amount
                                 ::source
                                 ::target
-                                ::description]
+                                ::amount]
                        :opt-un [::iso-date
+                                ::description
                                 ::ledger-template]))
 
 
@@ -44,11 +51,11 @@
   (partial merge defaults))
 
 
-;; transformer
+;; transformers
 
 
-(defmethod transform :plain [_ event]
-  (-> event
+(defmethod transform :plain [_ evt]
+  (-> evt
       (common/validate! ::event)
       common/add-iso-date
       (assoc* :ledger-template

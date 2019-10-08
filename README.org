@@ -1,6 +1,8 @@
 * Welcome to EASY - Evented Accounting Sourced from Yaml
 
-** Introductions
+[[./easy_logo.png]]
+
+** Introduction
 
 =easy= is a command line utility which generates artifacts typically
 used in accounting (but also other fields of business like invoicing)
@@ -8,18 +10,18 @@ based on events provided as [[https://yaml.org/][YAML]] files.
 
 ** Overview
 
-In principle easy is used to transform the business events given in
+In principle =easy= is used to transform the business events given in
 YAML into other business artifacts like invoices (PDF documents) or
 journal files for use with [[https://www.ledger-cli.org/][ledger]] (a command line utility for plain
 text accounting.) Processing of events happens in 5 steps:
 
-1. Read input events
-2. Check input events against spec
-3. Augment input events
-   3.1. Calculate drived values
-   3.2. Resolve related events
-4. Check augmented event against spec
-5. Render event(s) through templates
+  1. Read input events
+  2. Check input events against spec
+  3. Augment input events
+     1. Calculate derived values
+     2. Resolve related events
+  4. Check augmented event against spec
+  5. Render event(s) through templates
 
 ** Inputs
 
@@ -65,45 +67,131 @@ like.
 
 ** Install
 
+*** lumo via npm
+
 Easy runs on [[http://lumo-cljs.org/][lumo]] and uses node packages available via [[https://www.npmjs.com/][npm]], as well as
 ClojureScript packages available via [[https://clojars.org/][clojars]] (maven).
 
 Hence you will need to install the npm dependencies via =npm install=.
 
+*** clojars via Clojure's CLI
+
 ClojureScript dependencies tracked in =deps.edn= are installed via
 =clj= (aka. Clojure CLI). Please install =clj= as described [[https://clojure.org/guides/deps_and_cli][here]].
 
-Additionally [[https://github.com/kislyuk/yq][yq]] is like [[https://stedolan.github.io/jq/][jq]] for YAML, it is actually a wrapper around
-jq. It comes in really handy if working with multiple YAML files.
+*** Debian packages
 
-#+BEGIN_SRC sh
-sudo apt install python-pip
-pip install yq
-#+END_SRC
+To render invcoice via latex you need to have at least the follwoing
+packages installed (Debian naming):
+
+- texlive-latex-base
+- texlive-latex-recommended
 
 ** Usage
+
+Easy provides two command line utilities: =easy= itself and =collect=.
+Here are some examples on how to use these.
+
+You have to have some files in place in order to use easy. Please find
+the example directory of this repo and to run these examples.
 
 *** Examples
 
 Render ledger entries from events and run the through ledger to create
 a balance:
 
-=easy ledger example.yml | ledger bal -f -=
+=easy ledger -i events/invoices.yml | ledger bal -f -=
 
 Render invoice 18.2.1 to latex:
 
-=easy invoice example.yml 18.2.1=
+=easy invoice -i events/invoices.yml -n 1.1.1=
 
-Just run a transform to see the transformed events, which is handy for
+Sidenote: Easy invoice identifiers (invoice-no) are divided into three
+segments ~<customer-id>.<invoice-number>.<version>~. In events thei
+can be given as =invoice-no= in aggregated form or separately as
+=customer=, =number=, and =version=.
+
+Run a transform to see the transformed events, which is handy for
 writing templates:
 
-=easy transform example.yml=
+=easy transform -i events/invoices.yml=
 
-** Resolve & Context
+Or, just validate the input and exit:
+
+=easy validate -i events/invoices.yml=
+
+Easy alternatively takes events via STDIN:
+
+=cat events/invoices.yml | easy transform=
+
+This comes in particularly handy, when working with multiple event
+sources (i.e. YAML files)
+
+=cat events/*.yml | easy ledger | ledger -f - bal=
+
+(Please be ware that concatinating YAML files for easy only works if
+the files lack the YAML's document prefix =---=. The reason for this
+is explained in "On Frontmatter Templates". And it doens't really
+matter as you won't be using =cat= anyways, just keep reading.)
+
+Finally easy comes with its own utility to collect multiple event
+sources into a single event stream. Given a root directory for events
+it will find all files matching =*.yml=, load these, annotate each
+event with its origin (for locating issues quickly), and outputs a
+sorted stream of events.
+
+=collect events | easy ledger -y 2019=
+
+Yes, you guessed it, you can use =-y <year>= to filter events by year.
+
+** On Frontmatter Templates
+
+A typical event source for easy might look like this:
+
+#+BEGIN_SRC yaml
+- type: expense
+  account: Aufwand:6940-Bankspesen
+  payer: Joint
+  amount: 5
+  date: 2018-05-31
+  description: Bankgebühren
+- type: expense
+  account: Aufwand:6940-Bankspesen
+  payer: Joint
+  amount: 5
+  date: 2018-06-30
+  description: Bankgebühren
+#+END_SRC
+
+Imaging the file going on like this. These are monthly occurring
+events with very high redundancy. In these cases you might want to use
+=collect='s (and =easy='s) capability to work with frontmatter
+templates. This allows you to define common attributes of the list of
+events as a template using multiple YAML documents in one YAML file.
+That way you store the same information by writing:
+
+#+BEGIN_SRC yaml
+---
+type: expense
+account: Aufwand:6940-Bankspesen
+payer: Joint
+description: Bankgebühren
+---
+- date: 2018-05-31
+  amount: 5
+- date: 2018-06-30
+  amount: 5
+#+END_SRC
+
+Neat, isn't it?
+
+** On Resolve & Context
+
+This does only concern you if you are developing easy.
 
 Easy uses a multimethod =transform= to transform events into a
-/usable/ form. /Usable/ meaning it has all the details calculated and
-associated data added to be used in a template.
+/augmented/ form. /Augmented/ meaning it has all the details
+calculated and associated data added to be used in a template.
 
 The transformation of a single event might happen within a =context=.
 The =context= is the set of all events within a processing run.
@@ -111,12 +199,13 @@ The =context= is the set of all events within a processing run.
 are lists of events and the keys are their corresponding =type=. This
 is for convenience because in almost all cases you only want to have
 events of a single =type= when using the context to resolve associated
-events.)
+events. E.g. for a given invoice you want to resolve its settlement,
+or the other way round.)
 
 Associated data is added via resolve-fns. The resolve-fns use the
 context to lookup other events. As the context contains only "mildy"
 and not fully transformed events the resolve-fn will very likely have
-to transform the resolved event in order to make it usable. If this
+to transform the resolved event in order to make it augmented. If this
 would mean that another resolve-fn is triggerd this will likely
 trigger an endless recursion of resolves.
 

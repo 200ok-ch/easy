@@ -1,0 +1,22 @@
+; -*- mode: ledger -*-
+; «utf8», file: {{ledger-template}}
+
+{{iso-date}} * ({{uuid}}) {{#if deferral}}TA{{/if}} > R-{{invoice-no}} {{description}}
+    Ertrag:3400-Dienstleistungsertrag:T-{{tax-period}}:P-{{period}}
+    Aktiva:1100-Forderungen-aus-Lieferungen-und-Leistungen  {{gross-total}}
+
+{{#if deferral}}
+
+; the invoice is not yet settled, hence we will make temporary
+; bookings for profit centers, but we will only book 90% to account
+; for "Delkredere"
+{{#each items}}
+{{../iso-date}} * ({{uuid}}) R-{{../invoice-no}}/{{beneficiary}} ({{hours}}x{{rate}}) prov. 90%
+    (ProfitCenter:{{beneficiary}})  {{amount-with-delcredere}}
+{{/each}}
+
+{{iso-date}} * ({{uuid}}) TP R-{{invoice-no}} Verbindl. Mwst
+    Ertrag:3809-Saldosteuer  {{tax-out}}
+    Passiva:2300-Passive-Rechnungsabgrenzung
+
+{{/if}}

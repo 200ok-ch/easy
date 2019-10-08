@@ -1,0 +1,14 @@
+* Example
+
+The following command should create an invoice (PDF) in
+=customers/schaf=.
+
+#+BEGIN_SRC shell
+../bin/collect events | ../bin/easy invoice -n 1.1.1
+#+END_SRC
+
+And this will show the balance:
+
+#+BEGIN_SRC shell
+../bin/collect events | ../bin/easy -y 2019 ledger | ledger -f - bal
+#+END_SRC

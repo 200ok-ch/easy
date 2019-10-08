@@ -1,4 +1,5 @@
 (ns easy.salary
+  "This is not used, yet!"
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
@@ -6,15 +7,14 @@
             [easy.transform :refer [transform]]
             [easy.salary.items :as items]))
 
-;; ------------------------------------------------------------
+
 ;; spec
 
-;; required
+
 (s/def ::type #{"salary"})
 (s/def ::date util/date?)
 (s/def ::items (s/coll-of ::items/item))
 
-;; optional
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::ledger-template (s/and string? common/match-template))
 
@@ -24,8 +24,9 @@
                        :opt-un [::iso-date
                                 ::ledger-template]))
 
-;; ------------------------------------------------------------
+
 ;; defaults
+
 
 (def defaults
   {})
@@ -33,11 +34,12 @@
 (def merge-defaults
   (partial merge defaults))
 
-;; ------------------------------------------------------------
-;; transformer
 
-(defmethod transform :salary [_ event]
-  (-> event
+;; transformers
+
+
+(defmethod transform :salary [_ evt]
+  (-> evt
       (common/validate! ::event)
       common/add-iso-date
       (assoc* :ledger-template

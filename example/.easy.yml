@@ -1,0 +1,37 @@
+---
+customers: customers.yml
+
+coverage-tolerance: 0.02
+
+respect-tax-rate:
+  - rate: 0.077
+
+vat-tax-rate-in:
+  - rate: 0.08
+    until: 2017-12-31
+  - rate: 0.077
+    since: 2018-01-01
+
+vat-tax-rate-out:
+  - rate: 0.061
+    until: 2017-12-31
+  - rate: 0.059
+    since: 2018-01-01
+
+templates:
+  ledger:
+    invoice:    templates/invoice.dat.hbs
+    settlement: templates/settlement.dat.hbs
+  output:
+    overview:   templates/overview.txt.hbs
+
+invoice:
+  report:
+    template:   templates/report.txt.hbs
+  latex:
+    template:   templates/invoice.tex.hbs
+    directory:  'customers/{{customer.name}}'
+    filename:   '{{iso-date}}_{{replace invoice-no "." "_"}}.tex'
+
+# this is where the .lco files are
+texinputs-directory: templates
