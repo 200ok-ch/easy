@@ -23,7 +23,7 @@
 
 (defn sanitize-latex [text]
   (-> text
-      (replace "_" " ") ;; FIXME this is a hack
+      (replace "_" " ") ; FIXME: this is a hack
       (replace "#" "\\#")
       (replace "&" "\\&")))
 

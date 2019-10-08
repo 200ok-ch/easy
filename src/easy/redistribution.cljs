@@ -4,9 +4,9 @@
   - type: redistribution
     date: 2018-12-31
     accounts:
-      - payer: Phil
+      - payer: employee1
         amount: 10000
-      - payer: Alain
+      - payer: employee2
         amount: 50000
   ```"
   (:require [cljs.spec.alpha :as s]
