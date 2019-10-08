@@ -154,7 +154,7 @@
 ;;
 ;;   https://github.com/clojure/tools.cli/blob/master/src/main/clojure/clojure/tools/cli.cljc
 ;;
-;; Wouldn't this be a nice open source contribution? Achive some
+;; Wouldn't this be a nice open source contribution? Achieve some
 ;; laurels! Do it! Now!
 (defn -main
   "The main function which is called by lumo. It builds the environment
