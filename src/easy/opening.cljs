@@ -5,9 +5,9 @@
     date: 2018-01-01
     items:
       - account: 'Aktiva:1010-Postfinance'
-        amount: 8779.01
+        amount: 1234.12
       - account: 'Aktiva:1100-Forderungen-aus-Lieferungen-und-Leistungen'
-        amount: 23436
+        amount: 4321.21
       - account: 'Aktiva:1109-Wertberichtigungen-FLL'
         amount: -2340
   ...

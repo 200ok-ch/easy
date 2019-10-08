@@ -4,7 +4,7 @@
   - type: refund
     date: 2018-08-22
     description: Rückz. Direkte Bundesst. 2016
-    amount: 122.30
+    amount: 1234.56
     source: 8900-Direkte-Steuern
   ```"
   (:require [cljs.spec.alpha :as s]
