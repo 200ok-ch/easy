@@ -98,12 +98,19 @@
        (assoc* evt :customer)))
 
 
+(defn assert-exactly-one [x]
+  (case (count x)
+    0 (util/die "Expected exactly one, but got zero.")
+    1 (first x) ;; unpack
+    (util/die "More than one is too many.")))
+
+
 (defn resolve-invoice [{:keys [invoice-no] :as evt} context]
   (if (nil? context)
     evt
     (->> context
          (filter #(= invoice-no (:invoice-no %)))
-         first ;; TODO: assert-exactly-one
+         assert-exactly-one
          (safe-transform nil)
          (assoc* evt :invoice))))
 
@@ -125,6 +132,7 @@
 
 
 (defn add-tax-in [evt]
+  (log/debug-evt evt "tax-in = " (:net-total evt) " x " (-> evt :invoice :tax-rate-in))
   (->> (:net-total evt)
        (* (-> evt :invoice :tax-rate-in))
        util/round-currency
@@ -132,6 +140,7 @@
 
 
 (defn add-tax-out [evt]
+  (log/debug-evt evt "tax-out = " (:net-total evt) " x " (-> evt :invoice :tax-rate-out))
   (->> (:net-total evt)
        (* (-> evt :invoice :tax-rate-out))
        util/round-currency
@@ -139,6 +148,7 @@
 
 
 (defn add-tax-win [evt]
+  (log/debug-evt evt "tax-win = " (:tax-in evt) " - " (:tax-out evt))
   (->> (:tax-out evt)
        (- (:tax-in evt))
        util/round-currency
@@ -152,7 +162,7 @@
 (defn add-net-total
   "Calculates the net-total based on the gross-total (here `amount`)."
   [evt]
-  (->> (/ (:amount evt) (inc (:tax-rate-in evt)))
+  (->> (/ (:amount evt) (inc (-> evt :invoice :tax-rate-in)))
        util/round-currency
        (assoc* evt :net-total)))
 
@@ -274,6 +284,9 @@
 ;; `context` can also be nil, this is the case if the event is
 ;; transformed while being resolved for another event
 (defmethod transform :settlement [context evt]
+  (if context
+    (log/debug-evt evt "TRANSFORM WITH CONTEXT")
+    (log/debug-evt evt "TRANSFORM WITHOUT CONTEXT"))
   (-> evt
       (common/validate! ::event)
       merge-defaults

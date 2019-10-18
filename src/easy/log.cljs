@@ -18,6 +18,11 @@
   (first args))
 
 
+(defn debug-evt [evt & args]
+  (if (-> @config :options :options :debug)
+    (println (str "[" (:invoice-no evt) "]") (apply str args))))
+
+
 ;; (defn spy [& args]
 ;;   (apply pprint args)
 ;;   (last args))

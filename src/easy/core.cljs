@@ -11,10 +11,12 @@
             [easy.common :as common]
             [easy.log :as log]
             [easy.common.invoice-no :as invoice-no]
-            [clojure.tools.cli :refer [parse-opts]]
             [cljs.pprint :refer [pprint]]
             [cljs.spec.alpha :as s]
-            [clojure.string :refer [join]]
+            [clojure.tools.cli :refer [parse-opts]]
+            [clojure.string :refer [join split replace]]
+            [clojure.walk :refer [keywordize-keys]]
+            [clojure.data :refer [diff]]
             ;; NOTE: Even though we don't use any of the remaining
             ;; namespaces in this list, we nevertheless have to
             ;; require them here, otherwise they won't get loaded at
@@ -71,7 +73,12 @@
   (let [context (util/bin-by (comp keyword :type) events)]
     (->> events
          (map (partial safe-transform context))
-         pprint)))
+         ;; This filters events to the ones where the filter matches,
+         ;; as this is applied after transformation, you can filter
+         ;; for anything.
+         (filter #(nil? (second (diff % (:filter options)))))
+         util/write-yaml
+         println)))
 
 
 (defn noop!
@@ -143,11 +150,20 @@
     (process.exit 0)))
 
 
+(defn- parse-filter [arg]
+  (->> (split arg #",")
+       (map #(split % #"="))
+       flatten
+       (apply hash-map)
+       keywordize-keys))
+
+
 (def cli-options
   [["-d" "--debug" "Debug output"]
    ["-i" "--input INPUT" "Input file"]
-   ["-y" "--year NUMBER" "Year"]
-   ["-n" "--no NUMBER" "Invoice No"]])
+   ["-y" "--year NUMBER" "Year (only applies to the subcommand: ledger)"]
+   ["-n" "--no NUMBER" "Invoice No (only applies to the subcommand: invoice)"]
+   ["-f" "--filter FILTER" "Filter (only applies to the subcommand: transform)" :parse-fn parse-filter]])
 
 
 ;; TODO: get rid of the warning by using reader conditionals in
