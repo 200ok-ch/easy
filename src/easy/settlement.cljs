@@ -2,10 +2,10 @@
   "A *settlement* example:
   ```
   - type: settlement
-    description: Nick
+    description: Freelance Design
     date: 2018-02-01
     invoice-no: 7.2.1
-    amount: 323.1
+    amount: 5678.99
   ```"
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]

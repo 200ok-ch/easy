@@ -3,18 +3,18 @@
   ```
   - type: invoice
     date: 2018-04-08
-    description: VR Development
+    description: Acme Development
     settled: 2018-07-11
     customer-id: 3
     number: 5
     version: 1
     items:
-    - rate: 100.0
+    - rate: 220.0
       hours: 12.5
-      beneficiary: Alain
-    - rate: 100.0
+      beneficiary: employee1
+    - rate: 220.0
       hours: 19.25
-      beneficiary: Phil
+      beneficiary: employee2
   ```"
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]

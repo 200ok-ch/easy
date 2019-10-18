@@ -3,7 +3,7 @@
   ```
   - type: outlay
     description: Spesen 2018
-    beneficiary: Phil
+    beneficiary: employee1
     date: 2018-12-31
     amount: 2919.79
     receipt: 10

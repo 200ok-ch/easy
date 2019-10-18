@@ -1,27 +1,26 @@
 (ns easy.customers
   "An example customers file looks like this:
   ```
-  - name: vr
+  - name: acme
     year: 2015
     number: 3
     address: |
-      Voice Republic Media AG
-      Langstr. 10
+      Acme Corp
+      Langstr. 1
       8004 Zürich
     rate: 100
     deadline: 14
     contact: info
 
-  - name: sva
+  - name: wile
     year: 2014
     number: 2
     rate: 100
     address: |
-      SVA Zürich
-      Röntgenstrasse 17
-      Postfach
-      8087 Zürich
-    contact: phil
+      Wile E. Coyote
+      Langstr. 2
+      8004 Zürich
+    contact: staff
   ```"
   (:require [cljs.spec.alpha :as s]
             [clojure.pprint :refer [pprint]]
