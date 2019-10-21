@@ -23,6 +23,10 @@
             [cljs-time.format :as time]))
 
 
+;; TODO: add doc strings to all functions
+;; TODO: add pre conditions to all functions
+
+
 ;; spec
 
 
@@ -84,10 +88,7 @@
   (partial merge defaults))
 
 
-;; transformers
-
-;; TODO: add doc strings to all functions
-;; TODO: add pre conditions to all functions
+;; helpers
 
 
 (defn lookup-customer [{id :customer-id :as evt}]
@@ -105,6 +106,9 @@
     (util/die "More than one is too many.")))
 
 
+;; transformers
+
+
 (defn resolve-invoice [{:keys [invoice-no] :as evt} context]
   (if (nil? context)
     evt
@@ -115,23 +119,34 @@
          (assoc* evt :invoice))))
 
 
-(defn assert-invoice! [{:keys [invoice invoice-no] :as evt} context]
-  (if (and context (not invoice))
-    (do
-      (util/warn (str "No invoice for settlement '" invoice-no "'. Abort."))
-      (util/exit 1))
-    evt))
-
-
 ;; this can only be infered when invoice has been resolved
-(defn add-deferral [evt]
+(defn add-deferral
+  "Add the deferral flag if invoice and settlement are from separate
+  years.
+  ```
+  date: @s
+  invoice:
+    date: @i
+  deferral: (not= (.getFullYear @s) (.getFullYear @i))
+  ```"
+  [evt]
   (if-let [invoice (-> evt :invoice)]
     (assoc* evt :deferral (not= (-> evt :date .getFullYear)
                                 (-> invoice :date .getFullYear)))
+    ;; else the evt will be returned untouched
     evt))
 
 
-(defn add-tax-in [evt]
+(defn add-tax-in
+  "The amount of taxes based in the settlement's net-total and the
+  invoice's tax-rate-in.
+  ```
+  net-total: @n
+  invoice:
+    tax-rate-in: @t
+  tax-in: (* @n @t)
+  ```"
+  [evt]
   (log/debug-evt evt "tax-in = " (:net-total evt) " x " (-> evt :invoice :tax-rate-in))
   (->> (:net-total evt)
        (* (-> evt :invoice :tax-rate-in))
@@ -139,9 +154,18 @@
        (assoc* evt :tax-in)))
 
 
-(defn add-tax-out [evt]
-  (log/debug-evt evt "tax-out = " (:net-total evt) " x " (-> evt :invoice :tax-rate-out))
-  (->> (:net-total evt)
+(defn add-tax-out
+  "The taxes to pay based on the amount of settlement (usually equal to
+  the invoice's gross total) and the invoice's tax-rate-out.
+  ```
+  amount: @a
+  invoice:
+    tax-rate-out: @t
+  tax-out: (* @a @t)
+  ```"
+  [evt]
+  (log/debug-evt evt "tax-out = " (:amount evt) " x " (-> evt :invoice :tax-rate-out))
+  (->> (:amount evt)
        (* (-> evt :invoice :tax-rate-out))
        util/round-currency
        (assoc* evt :tax-out)))
@@ -160,7 +184,14 @@
 
 
 (defn add-net-total
-  "Calculates the net-total based on the gross-total (here `amount`)."
+  "Calculates the net-total based on the gross-total (here `amount`) and
+  the invoice's tax-rate-in.
+  ```
+  amount: @a
+  invoice:
+    tax-rate-in: @t
+  net-total: (/ @a (inc @t))
+  ```"
   [evt]
   (->> (/ (:amount evt) (inc (-> evt :invoice :tax-rate-in)))
        util/round-currency
@@ -176,19 +207,24 @@
       (assoc* :ledger-template
               (get-in @config [:templates :ledger :settlement]))))
 
+
 (defn order-items-by-amount [evt]
+  ;; (update evt :items (comp reverse (partial sorty-by :amount)))
   (merge evt
          {:items (reverse (sort-by :amount (:items evt)))}))
+
 
 (defn add-latex-content [evt]
   (->> evt
        templating/render-latex
        (assoc* evt :latex-content)))
 
+
 (defn add-latex-directory [evt]
   (let [directory (get-in @config [:invoice :latex :directory])]
     (->> (templating/template directory evt)
          (assoc* evt :latex-directory))))
+
 
 (defn add-latex-filename [evt]
   (let [filename (get-in @config [:invoice :latex :filename])]
@@ -214,16 +250,19 @@
 ;;        (map (format evt))
 ;;        (apply util/spit)))
 
+
 (defn add-pdflatex-cmd [{directory :latex-directory
                          filename :latex-filename
                          :as evt}]
   (->> (str "(cd " directory " && pdflatex " filename ")")
        (assoc* evt :pdflatex-cmd)))
 
+
 (defn run-pdflatex! [{cmd :pdflatex-cmd
                       :as evt}]
   (util/sh cmd)
   evt)
+
 
 (defn transform-latex! [evt]
   (-> evt
@@ -264,7 +303,18 @@
          (assoc* evt :distribution))))
 
 
-(defn add-remaining [evt]
+;; NOTE: calling this `remainder` instead would cause a naming
+;; collision with handlebars helpers!
+(defn add-remaining
+  "Add the remaining amount based on the actual amount and the invoice's
+  gross-total, unless it is 0 then it will be omitted.
+  ```
+  amount: @a
+  invoice:
+    gross-total: @t
+  remaining: (- @t @a)
+  ```"
+  [evt]
   (if-let [invoice (-> evt :invoice)]
     (let [invoice-amount (-> invoice :gross-total)
           payment-amount (-> evt :amount)
@@ -292,7 +342,6 @@
       merge-defaults
       lookup-customer
       (resolve-invoice (:invoice context))
-      (assert-invoice! context)
       add-deferral
       common/add-iso-date
       tax/add-period
