@@ -4,7 +4,7 @@
 # saves quite some time, because we don't need to fire up a jvm just
 # to establish a classpath
 
-BASEDIR=$(dirname "$0")/..
+BASEDIR=$(cd "$(dirname "$0")/.."; pwd)
 
 KLASSPATHFILE=./.classpath
 if [ ! -f $KLASSPATHFILE ]; then
@@ -13,6 +13,7 @@ if [ ! -f $KLASSPATHFILE ]; then
 fi
 
 KLASSPATH=$(cat $KLASSPATHFILE)
+
 export NODE_PATH=$BASEDIR/node_modules
 
 exec $BASEDIR/node_modules/.bin/lumo -K -c "$KLASSPATH" -m easy.core $@

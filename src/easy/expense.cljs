@@ -10,6 +10,7 @@
   ```"
   (:require [cljs.spec.alpha :as s]
             [cljs-time.format :as time]
+            [clojure.string :as str]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.common.tax :as tax]
@@ -27,6 +28,9 @@
 (s/def ::amount float?)
 
 (s/def ::description string?)
+(s/def ::addendum (s/or :string string?
+                        :number number?))
+(s/def ::description-with-addendum string?)
 (s/def ::ledger-template (s/and string? common/match-template))
 
 (s/def ::event (s/keys :req-un [::type
@@ -35,6 +39,8 @@
                                 ::payer
                                 ::account]
                        :opt-un [::description
+                                ::addendum
+                                ::description-with-addendum
                                 ::ledger-template]))
 
 
@@ -65,6 +71,14 @@
        (assoc* evt :respect-tax-amount)))
 
 
+(defn- add-description-with-addendum [evt]
+  (->> [:description :addendum]
+       (map evt)
+       (remove nil?)
+       (str/join " ")
+       (assoc* evt :description-with-addendum)))
+
+
 (defmethod transform :expense [_ evt]
   (-> evt
       (common/validate! ::event)
@@ -72,6 +86,7 @@
       add-respect-tax-rate
       add-respect-tax-amount
       tax/add-period
+      add-description-with-addendum
       (assoc* :ledger-template
               (get-in @config [:templates :ledger :expense]))
       (common/validate! ::event)))
