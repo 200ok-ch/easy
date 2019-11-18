@@ -159,16 +159,31 @@
 
 
 (defn transform-items [evt]
-  (update evt :items (partial map item/transform)))
+  (update evt :items (partial map #(item/transform % evt))))
 
 
-(defn add-net-total [evt]
+(defn add-net-total-before-discount [evt]
   (->> evt
        :items
        (map :amount)
        (reduce +)
-       ;; TODO: calculate and subtract discount
        util/round-currency
+       (assoc* evt :net-total-before-discount)))
+
+
+(defn add-discount-amount [evt]
+  (->> evt
+       :net-total-before-discount
+       (* (/ (get evt :discount 0) 100))
+       util/round-currency
+       (assoc* evt :discount-amount)))
+
+
+(defn add-net-total [evt]
+  (->> evt
+       :discount-amount
+       (- (evt :net-total-before-discount))
+       ;; util/round-currency
        (assoc* evt :net-total)))
 
 
@@ -309,6 +324,8 @@
       add-tax-rate-in
       add-tax-rate-out
       transform-items
+      add-net-total-before-discount
+      add-discount-amount
       add-net-total
       add-tax-in
       add-gross-total

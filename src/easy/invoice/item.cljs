@@ -10,7 +10,6 @@
 (s/def ::rate float?)
 (s/def ::hours float?)
 (s/def ::beneficiary string?)
-(s/def ::discount float?)
 (s/def ::amount float?)
 (s/def ::timesheet (s/and string? #(.endsWith % ".csv")))
 
@@ -35,15 +34,13 @@
                       :opt-un [::hours
                                ::timesheet
                                ::timesheet-data
-                               ::discount
                                ::amount]))
 
 
 ;; defaults
 
 
-(def defaults
-  {:discount 0})
+(def defaults {})
 
 
 (def ^:private merge-defaults
@@ -98,24 +95,24 @@
 (defn- add-amount [item]
   (->> (map item [:rate :hours])
        (apply *)
-       ;; TODO: calculate and subtract discount
        util/round-currency
        (assoc* item :amount)))
 
 
-(defn- add-amount-with-delcredere [item]
-  (->> item
-       :amount
-       (* 0.9)
+(defn- add-amount-with-discount-and-delcredere [item invoice]
+  (->> (/ (invoice :discount) 100)
+       (* (item :amount))
+       (- (item :amount))
+       (* 0.9) ;; the famous delcredere constant
        util/round-currency
-       (assoc* item :amount-with-delcredere)))
+       (assoc* item :amount-with-discount-and-delcredere)))
 
 
-(defn transform [item]
+(defn transform [item invoice]
   (-> item
       merge-defaults
       read-timesheet
       prepare-timesheet
       add-hours
       add-amount
-      add-amount-with-delcredere))
+      (add-amount-with-discount-and-delcredere invoice)))
