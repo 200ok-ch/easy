@@ -299,6 +299,8 @@
          :invoice
          :items
          (map (fn [i] (update i :amount #(util/round-currency (* % (:coverage evt))))))
+         ;; add delcredere, we need it for profitcenter bookings in case of deferrals
+         (map (fn [i] (assoc i :delcredere (util/round-currency (* 0.1 (:amount i))))))
          vec ;; for iterating in handlebars templates this needs to be a vector, not a list!
          (assoc* evt :distribution))))
 
