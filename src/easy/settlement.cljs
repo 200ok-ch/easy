@@ -198,6 +198,22 @@
        (assoc* evt :net-total)))
 
 
+(defn add-delcredere [evt]
+  (->> evt
+       :net-total
+       (* 0.1)
+       util/round-currency
+       (assoc* evt :delcredere)))
+
+
+(defn add-net-total-without-delcredere [evt]
+  (->> evt
+       :delcredere
+       (- (:net-total evt))
+       util/round-currency
+       (assoc* evt :net-total-without-delcredere)))
+
+
 (defn add-templates [evt]
   (-> evt
       (assoc* :report-template
@@ -349,6 +365,8 @@
       tax/add-period
       transform-items
       add-net-total
+      add-delcredere
+      add-net-total-without-delcredere
       add-coverage
       add-remaining
       add-distribution
