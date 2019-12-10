@@ -79,6 +79,14 @@
        (assoc* evt :description-with-addendum)))
 
 
+(defn add-deferral [evt]
+  (assoc* evt :deferral
+          (if-let [invoice-date (-> evt :invoice-date)]
+            (not= (-> evt :date .getFullYear)
+                  (-> invoice-date .getFullYear))
+            false)))
+
+
 (defmethod transform :expense [_ evt]
   (-> evt
       (common/validate! ::event)
@@ -86,6 +94,7 @@
       add-respect-tax-rate
       add-respect-tax-amount
       tax/add-period
+      add-deferral
       add-description-with-addendum
       (assoc* :ledger-template
               (get-in @config [:templates :ledger :expense]))
