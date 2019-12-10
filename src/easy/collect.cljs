@@ -34,7 +34,7 @@
         options (-> cli :options)]
     (->> path
          lumo/file-seq
-         (filter #(re-matches #".+\.yml$" %))
+         (filter #(re-matches #"[^.].*\.yml$" %))
          (map read-and-parse)
          (apply concat)
          harmonize
