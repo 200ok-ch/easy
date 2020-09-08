@@ -16,7 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "handlebars": "^4.0.12",
+    "handlebars": "^4.5.3",
     "handlebars-helpers": "^0.10.0",
     "js-yaml": "^3.12.0",
     "sprintf-js": "^1.1.2",
