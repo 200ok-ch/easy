@@ -12,7 +12,10 @@
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.config :refer [config]]
-            [easy.transform :refer [transform]]))
+            [easy.transform :refer [transform]]
+            [easy.outlay.detail :as detail]
+            ;; [easy.outlay.payer :as payer]
+            ))
 
 
 ;; spec
@@ -24,6 +27,9 @@
 (s/def ::beneficiary string?)
 
 (s/def ::description string?)
+(s/def ::details (s/coll-of ::detail/detail))
+;; payers look just like details
+(s/def ::payers (s/coll-of ::detail/detail))
 (s/def ::iso-date (s/and string? common/match-iso-date))
 (s/def ::ledger-state #{"*"})
 (s/def ::ledger-template (s/and string? common/match-template))
@@ -32,7 +38,9 @@
                                 ::date
                                 ::amount
                                 ::beneficiary]
-                       :opt-un [::description]))
+                       :opt-un [::description
+                                ::details
+                                ::payers]))
 
 
 ;; defaults
@@ -52,6 +60,7 @@
   (-> evt
       (common/validate! ::event)
       common/add-iso-date
+      ;; TODO: calculate amount from details
       (assoc* :ledger-state "*") ;; always cleared
       (assoc* :ledger-template
               (get-in @config [:templates :ledger :outlay]))
