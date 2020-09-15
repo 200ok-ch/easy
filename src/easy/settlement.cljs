@@ -81,7 +81,7 @@
 
 
 (def defaults
-  {})
+  {:discount 0})
 
 
 (def merge-defaults
@@ -309,12 +309,21 @@
     evt))
 
 
+(defn- add-discount-factor [evt]
+  (assoc* evt :discount-factor (/ (- 100 (:discount evt)) 100)))
+
+
 (defn add-distribution [evt]
   (let [total (-> evt :invoice :amount)]
     (->> evt
          :invoice
          :items
-         (map (fn [i] (update i :amount #(util/round-currency (* % (:coverage evt))))))
+         ;; adjust item's amount according to coverage of settlement
+         (map (fn [i] (update i :amount * (:coverage evt))))
+         ;; deduct any discount
+         (map (fn [i] (update i :amount * (:discount-factor evt))))
+         ;; round
+         (map (fn [i] (update i :amount util/round-currency)))
          ;; add delcredere, we need it for profitcenter bookings in case of deferrals
          (map (fn [i] (assoc i :delcredere (util/round-currency (* 0.1 (:amount i))))))
          vec ;; for iterating in handlebars templates this needs to be a vector, not a list!
@@ -369,6 +378,7 @@
       add-net-total-without-delcredere
       add-coverage
       add-remaining
+      add-discount-factor
       add-distribution
       add-tax-in
       add-tax-out
