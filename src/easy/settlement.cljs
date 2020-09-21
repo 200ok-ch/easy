@@ -81,7 +81,7 @@
 
 
 (def defaults
-  {:discount 0})
+  {})
 
 
 (def merge-defaults
@@ -310,7 +310,7 @@
 
 
 (defn- add-discount-factor [evt]
-  (assoc* evt :discount-factor (/ (- 100 (:discount evt)) 100)))
+  (assoc* evt :discount-factor (/ (- 100 (-> evt :invoice :discount)) 100)))
 
 
 (defn add-distribution [evt]

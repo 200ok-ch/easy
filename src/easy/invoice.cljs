@@ -95,7 +95,8 @@
 
 
 (def defaults
-  {:deadline 30})
+  {:discount 0
+   :deadline 30})
 
 
 (def merge-defaults
@@ -174,7 +175,7 @@
 (defn add-discount-amount [evt]
   (->> evt
        :net-total-before-discount
-       (* (/ (get evt :discount 0) 100))
+       (* (/ (evt :discount) 100))
        util/round-currency
        (assoc* evt :discount-amount)))
 
