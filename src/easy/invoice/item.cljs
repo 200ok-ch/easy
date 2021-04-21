@@ -10,6 +10,7 @@
 (s/def ::rate float?)
 (s/def ::hours float?)
 (s/def ::beneficiary string?)
+(s/def ::description string?)
 (s/def ::amount float?)
 (s/def ::timesheet (s/and string? #(.endsWith % ".csv")))
 
@@ -27,15 +28,25 @@
 ;;
 ;; (s/def ::timesheet-prepared
 
-;; TODO: how do I spec: either hours or timesheet has to be present?
-
-(s/def ::item (s/keys :req-un [::rate
-                               ::beneficiary]
-                      :opt-un [::hours
-                               ::timesheet
-                               ::timesheet-data
-                               ::amount]))
-
+(s/def ::item (s/or :with-amount-and-description
+                    (s/keys :req-un [::amount
+                                     ::description
+                                     ::beneficiary]
+                            :opt-un [::hours
+                                     ::rate
+                                     ::timesheet
+                                     ::timesheet-data])
+                    :with-rate-and-hours
+                    (s/keys :req-un [::rate
+                                     ::hours
+                                     ::beneficiary]
+                            :opt-un [::timesheet
+                                     ::timesheet-data])
+                    :with-rate-and-timesheet
+                    (s/keys :req-un [::rate
+                                     ::timesheet
+                                     ::beneficiary]
+                            :opt-un [::timesheet-data])))
 
 ;; defaults
 
@@ -108,6 +119,12 @@
        (assoc* item :amount-with-discount-and-delcredere)))
 
 
+(defn- add-description [{:keys [beneficiary rate] :as item}]
+  ;; TODO: make this default adjustable via config or templates
+  (->> (str "Beratung " beneficiary " (" hours " x " rate " CHF/Std.)")
+       (assoc* item :description)))
+
+
 (defn transform [item invoice]
   (-> item
       merge-defaults
@@ -115,4 +132,5 @@
       prepare-timesheet
       add-hours
       add-amount
+      add-description
       (add-amount-with-discount-and-delcredere invoice)))
