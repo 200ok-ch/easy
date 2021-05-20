@@ -62,8 +62,13 @@
   (util/validate! spec x))
 
 
-;; transformers
+(defn make-iso-date [date]
+  (->> date
+       cljs-time/date-time
+       (time/unparse util/iso-formatter)))
 
+
+;; transformers
 
 (defn add-iso-date
   "Transformer that takes the value of `:date`, builds an iso-date
@@ -71,6 +76,5 @@
   [evt]
   (->> evt
        :date
-       cljs-time/date-time
-       (time/unparse util/iso-formatter)
+       make-iso-date
        (assoc* evt :iso-date)))
