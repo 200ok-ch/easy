@@ -258,6 +258,12 @@
     (assoc* evt :deferral true)))
 
 
+(defn add-deadline-iso-date [evt]
+  (let [d (-> evt :date)]
+    (.setDate d (+ (.getDate d) (:deadline evt)))
+    (assoc* evt :deadline-iso-date (common/make-iso-date d))))
+
+
 ;; TODO: refactor everything so that latex has its own submap wuth
 ;; content, path etc. so we can have a generic write! function which
 ;; takes a invoice and a key to the submap, see commented function
@@ -333,4 +339,5 @@
       add-tax-out
       add-tax-win
       add-templates
+      add-deadline-iso-date
       (common/validate! ::event)))
