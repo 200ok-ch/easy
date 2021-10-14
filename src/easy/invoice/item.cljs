@@ -119,7 +119,7 @@
        (assoc* item :amount-with-discount-and-delcredere)))
 
 
-(defn- add-description [{:keys [beneficiary rate] :as item}]
+(defn- add-description [{:keys [hours beneficiary rate] :as item}]
   ;; TODO: make this default adjustable via config or templates
   (->> (str "Beratung " beneficiary " (" hours " x " rate " CHF/Std.)")
        (assoc* item :description)))
