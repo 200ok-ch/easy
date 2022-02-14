@@ -22,10 +22,11 @@
 
 
 (defn sanitize-latex [text]
-  (-> text
-      (replace "_" " ") ; FIXME: this is a hack
-      (replace "#" "\\#")
-      (replace "&" "\\&")))
+  (when text
+    (-> text
+        (replace "_" " ") ; FIXME: this is a hack
+        (replace "#" "\\#")
+        (replace "&" "\\&"))))
 
 (defn warn [msg]
   (.error js/console (clj->js msg))
