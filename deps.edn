@@ -1,5 +1,5 @@
 {:deps
  {com.andrewmcveigh/cljs-time {:mvn/version "0.5.2"}
-  testdouble/clojurescript.csv {:mvn/version "0.3.0"}
+  testdouble/clojurescript.csv {:mvn/version "0.5.1"}
   basil {:mvn/version "0.4.1"}
   org.clojure/tools.cli {:mvn/version "0.4.1"}}}
