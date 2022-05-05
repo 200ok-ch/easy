@@ -306,7 +306,7 @@
 ;; main transform, except for write-latex! and run-pdflatex!
 (defn transform-latex! [evt]
   (-> evt
-      order-items-by-amount
+      ;; order-items-by-amount ;; CHECK: when was this a good idea?
       add-latex-content
       add-latex-directory
       add-latex-filename
