@@ -25,7 +25,8 @@
                 "reconciliation"   ;; Ausgleichsbuchung
                 "salary"           ;; Gehalt
                 "outlay"           ;; Spesenabrechnung
-                "redistribution"}) ;; "200ok Sozialfaktor"
+                "redistribution"   ;; "200ok Sozialfaktor"
+                "dctd"})           ;; Diner's Club Transaction Details
 
 (s/def ::date (s/or :date util/date?
                     :iso-string (s/and string? match-iso-date)))

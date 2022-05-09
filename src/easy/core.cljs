@@ -29,7 +29,8 @@
             easy.salary
             easy.outlay
             easy.settlement
-            easy.redistribution))
+            easy.redistribution
+            easy.dctd))
 
 
 ;; (sub-)commands
@@ -44,6 +45,7 @@
          (map invoice-no/unify)
          ;; transform all events within the `context`
          (map (partial safe-transform context))
+         flatten
          ;; filter to the events that belong to the year given with -y
          ;; TODO: do not filter when year is not given
          (filter #(.startsWith (:iso-date %) (:year options)))
@@ -73,6 +75,7 @@
   (let [context (util/bin-by (comp keyword :type) events)]
     (->> events
          (map (partial safe-transform context))
+         flatten
          ;; This filters events to the ones where the filter matches,
          ;; as this is applied after transformation, you can filter
          ;; for anything.
@@ -93,6 +96,7 @@
   (let [context (util/bin-by (comp keyword :type) events)]
     (->> events
          (map (partial safe-transform context))
+         flatten
          doall)))
 
 
@@ -102,6 +106,7 @@
   (let [context (util/bin-by (comp keyword :type) events)]
     (->> events
          (map (partial safe-transform context))
+         flatten
          overview/crunch-numbers
          templating/render-overview
          println)))
