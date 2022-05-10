@@ -101,6 +101,7 @@
     (:source evt)))
 
 (defn prepare-booking [{:keys [mappings] :as evt} booking]
+  ;; (println booking)
   (-> booking
       (set/rename-keys {:contractual-partner :description
                         :transaction-date :iso-date})
@@ -121,6 +122,11 @@
        :csvs
        (map (partial drop 1))
        (apply concat)
+
+       (remove #{[nil]})
+
+       ;; (remove (fn [[v _]] (or (nil? v) (empty? v))))
+
        (map (partial zipmap (:header evt)))
        (map (partial prepare-booking evt))
        (map drop-boring)
