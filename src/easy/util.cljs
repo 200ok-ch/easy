@@ -192,3 +192,8 @@
       (assoc evt field (js/Date. date))
       evt)
     evt))
+
+
+(defn assert-only-one! [msg x]
+  (assert (= 1 (count x)) msg)
+  x)
