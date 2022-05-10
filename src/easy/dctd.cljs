@@ -1,7 +1,7 @@
 (ns easy.dctd
   "Diner's Club Transaction Details"
   (:require [cljs.spec.alpha :as s]
-            [easy.util :as util :refer [assoc*]]
+            [easy.util :as util :refer [assoc* assert-only-one!]]
             [lumo.util :as lumo]
             [testdouble.cljs.csv :as csv]
             [clojure.string :as str]
@@ -63,10 +63,6 @@
        (map util/slurp)
        (map csv/read-csv)
        (assoc evt :csvs)))
-
-(defn assert-only-one! [msg x]
-  (assert (= 1 (count x)) msg)
-  x)
 
 (defn prepare-header [header]
   (-> header

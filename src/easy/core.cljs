@@ -62,6 +62,7 @@
          (filter #(= "invoice" (:type %)))
          (map invoice/add-invoice-no)
          (filter #(= (:invoice-no %) (:no options)))
+         (util/assert-only-one! "Error: Check if you've entered the right invoice-no")
          first
          (safe-transform context)
          invoice/transform-latex!
