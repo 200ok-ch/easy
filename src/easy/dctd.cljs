@@ -3,7 +3,7 @@
   (:require [cljs.spec.alpha :as s]
             [easy.util :as util :refer [assoc* assert-only-one!]]
             [lumo.util :as lumo]
-            [testdouble.cljs.csv :as csv]
+            [goog.labs.format.csv :as csv]
             [clojure.string :as str]
             [clojure.set :as set]
             [cljs-time.core :as cljs-time]
@@ -61,7 +61,8 @@
   (->> evt
        :files
        (map util/slurp)
-       (map csv/read-csv)
+       (map csv/parse)
+       (map js->clj)
        (assoc evt :csvs)))
 
 (defn prepare-header [header]
@@ -83,7 +84,8 @@
 (defn read-bookings [file]
   (->> file
        util/slurp
-       csv/read-csv
+       csv/parse
+       js->clj
        (drop 1)))
 
 (def formatter-in (time/formatter "MM/dd/yyyy"))
