@@ -1,6 +1,6 @@
 (ns easy.invoice.item
   (:require [cljs.spec.alpha :as s]
-            [testdouble.cljs.csv :as csv]
+            [goog.labs.format.csv :as csv]
             [easy.util :as util :refer [assoc*]]))
 
 
@@ -65,7 +65,8 @@
   (if-let [timesheet (:timesheet item)]
     (->> timesheet
          util/slurp
-         csv/read-csv
+         csv/parse
+         js->clj
          (assoc* item :timesheet-data))
     item))
 
