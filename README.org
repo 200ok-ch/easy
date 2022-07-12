@@ -165,10 +165,10 @@ A typical event source for easy might look like this:
 
 Imaging the file going on like this. These are monthly occurring
 events with very high redundancy. In these cases you might want to use
-=collect='s (and =easy='s) capability to work with frontmatter
-templates. This allows you to define common attributes of the list of
-events as a template using multiple YAML documents in one YAML file.
-That way you store the same information by writing:
+=collect='s (and =easy='s) capability to work with templates. This
+allows you to define common attributes of the list of events as a
+template using multiple YAML documents in one YAML file. That way you
+store the same information by writing:
 
 #+BEGIN_SRC yaml
 ---
@@ -182,6 +182,41 @@ description: Bankgebühren
 - date: 2018-06-30
   amount: 5
 #+END_SRC
+
+Any list will be interpreted as a list of events, likewise any
+associative will be interpreted as template.
+
+Here is another example:
+
+#+begin_src yaml
+---
+a: 1
+b: 2
+---
+- c: 3
+---
+b: 4
+d: 5
+---
+- e: 6
+- f: 7
+#+end_src
+
+Will result in the following data structure:
+
+#+begin_src yaml
+- a: 1
+  b: 2
+  c: 3
+- a: 1
+  b: 4
+  d: 5
+  e: 6
+- a: 1
+  b: 4
+  d: 5
+  f: 7
+#+end_src
 
 Neat, isn't it?
 

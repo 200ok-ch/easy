@@ -87,26 +87,37 @@
       (indent 2)))
 
 
-(defn apply-frontmatter-template
-  "Takes a vector of documents. Dies if the vector has 0 or more than 2
-  entries. If it has 1 entry it will just return that entry. If it
-  finds 2 entries it will use the first doc as a event template (with
-  defaults) for the list of events found in the 2nd entry. It returns
-  then the list of events found in the 2nd entry merged into the
-  defaults of the event template found in the 1st entry."
-  [doc]
-  (case (count doc)
-    ;; zero docs? something went wrong
-    0 (die "No document?")
-    ;; one doc, the regular case, just unwrap it from the docs vector
-    1 (first doc)
-    ;; two docs: the first is an event template (with defaults), which
-    ;; is used as a basis for the list of events in the 2nd doc
-    2 (map #(merge (first doc) %) (second doc))
-    ;; else
-    ;; TODO: this could be used to have templates and event lists in
-    ;; alternating fashion
-    (die "Sorry, don't know how to handle more then two docs.")))
+(defn doc-reducer-dispatcher [doc]
+  (cond
+    (sequential? doc) :sequential
+    (associative? doc) :associative
+    :else (type doc)))
+
+
+(defmulti doc-reducer (fn [_ doc] (doc-reducer-dispatcher doc)))
+
+
+(defmethod doc-reducer :sequential [{:keys [template] :as aggregator} events]
+  (update aggregator :events concat (map (partial merge template) events)))
+
+
+(defmethod doc-reducer :associative [{:keys [template] :as aggregator} new-template]
+  (update aggregator :template merge new-template))
+
+
+(defn apply-templates [docs]
+  (:events (reduce doc-reducer {:template {} :events []} docs)))
+
+
+(defn parse-yaml
+  "Parses YAML with mulitple docs, and joins these does by applying YAML
+  event templates (associatives) to YAML event lists (sequentials) and
+  concatenating these lists."
+  [string]
+  (-> string
+      yaml/loadAll
+      (js->clj :keywordize-keys true)
+      apply-templates))
 
 
 (defn annotate
@@ -114,16 +125,6 @@
   index is the position of the event in the source file."
   [events path]
   (map-indexed #(assoc %2 :source-path (str path ":e" %1)) events))
-
-
-(defn parse-yaml
-  "Parses YAML, applys any YAML frontmatter event templates
-  and annotates the events with their `:source`."
-  [string]
-  (-> string
-      yaml/loadAll
-      (js->clj :keywordize-keys true)
-      apply-frontmatter-template))
 
 
 (def date? (partial instance? js/Date))
