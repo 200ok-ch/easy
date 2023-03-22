@@ -96,7 +96,7 @@
 (defmulti doc-reducer (fn [_ doc] (doc-reducer-dispatcher doc)))
 
 (defmethod doc-reducer :default [agg doc]
-  (warn "Don't know how to handle YAML doc of type" (type doc) "Skipping.")
+  (warn (str "Don't know how to handle YAML doc of type '" (type doc) "' Skipping."))
   agg)
 
 (defmethod doc-reducer :sequential [{:keys [template] :as aggregator} events]
@@ -106,8 +106,12 @@
   (assoc aggregator :template new-template))
 
 (defn apply-templates [docs]
-  (:events (reduce doc-reducer {:template {} :events []} docs)))
-
+  ;; Handle one special case, when there is only one doc then return
+  ;; it, this allows to read YAML documents that don't hold events to
+  ;; be read by the same means
+  (if (= 1 (count docs))
+    (first docs)
+    (:events (reduce doc-reducer {:template {} :events []} docs))))
 
 (defn parse-yaml
   "Parses YAML with mulitple docs, and joins these does by applying YAML
