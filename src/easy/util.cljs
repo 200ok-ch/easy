@@ -90,20 +90,20 @@
 (defn doc-reducer-dispatcher [doc]
   (cond
     (sequential? doc) :sequential
-    (associative? doc) :associative
+    (map? doc) :map
     :else (type doc)))
-
 
 (defmulti doc-reducer (fn [_ doc] (doc-reducer-dispatcher doc)))
 
+(defmethod doc-reducer :default [agg doc]
+  (warn "Don't know how to handle YAML doc of type" (type doc) "Skipping.")
+  agg)
 
 (defmethod doc-reducer :sequential [{:keys [template] :as aggregator} events]
   (update aggregator :events concat (map (partial merge template) events)))
 
-
-(defmethod doc-reducer :associative [{:keys [template] :as aggregator} new-template]
-  (update aggregator :template merge new-template))
-
+(defmethod doc-reducer :map [{:keys [template] :as aggregator} new-template]
+  (assoc aggregator :template new-template))
 
 (defn apply-templates [docs]
   (:events (reduce doc-reducer {:template {} :events []} docs)))
