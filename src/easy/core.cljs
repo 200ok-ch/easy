@@ -82,6 +82,7 @@
          ;; for anything.
          (filter #(nil? (second (diff % (:filter options)))))
          util/write-yaml
+         ;; prn-str
          println)))
 
 
@@ -156,12 +157,17 @@
     (process.exit 0)))
 
 
+;; FIXME: find a nice syntax to pass filters reliably via commandline
+;; args
 (defn- parse-filter [arg]
-  (->> (split arg #",")
-       (map #(split % #"="))
-       flatten
-       (apply hash-map)
-       keywordize-keys))
+  ;;(println arg)
+  ;;(process.exit 0)
+  (read-string arg))
+;;   (->> (split arg #",")
+;;        (map #(split % #"="))
+;;        flatten
+;;        (apply hash-map)
+;;        keywordize-keys))
 
 
 (def cli-options
