@@ -1,7 +1,7 @@
 (ns easy.dctd
   "Diner's Club Transaction Details"
   (:require [cljs.spec.alpha :as s]
-            [easy.util :as util :refer [assoc* assert-only-one!]]
+            [easy.util :as util :refer [assoc*]]
             [lumo.util :as lumo]
             [goog.labs.format.csv :as csv]
             [clojure.string :as str]
@@ -27,8 +27,22 @@
                                 ::source
                                 ::path]))
 
-;; TODO: write a spec based on the ledger template
-(s/def ::transaction-event (s/keys :req-un []))
+(s/def ::iso-date string?)
+(s/def ::source-path string?)
+(s/def ::index int?)
+(s/def ::note string?)
+(s/def ::description string?)
+(s/def ::target string?)
+(s/def ::amount float?)
+
+(s/def ::transaction-event (s/keys :req-un [::iso-date
+                                            ::source-path
+                                            ::index
+                                            ::description
+                                            ::source
+                                            ::target
+                                            ::amount]
+                                   :opt-un [::note]))
 
 (s/def ::transaction-events (s/coll-of ::transaction-event))
 
@@ -71,42 +85,45 @@
       (str/replace #" " "-")
       keyword))
 
-(defn add-header [evt]
-  (->> evt
-       :csvs
-       (map first)
-       distinct
-       (assert-only-one! "Failed expectation: All csv headers are the same.")
-       first
-       (map prepare-header)
-       (assoc* evt :header)))
-
-(defn read-bookings [file]
-  (->> file
-       util/slurp
-       csv/parse
-       js->clj
-       (drop 1)))
-
-(def formatter-in (time/formatter "MM/dd/yyyy"))
+(def formatters-in [(time/formatter "MM.dd.yyyy")
+                    (time/formatter "MM/dd/yyyy")])
 
 (def formatter-out (time/formatter "yyyy-MM-dd"))
 
 (defn fix-date [date]
-  (->> date
-       (time/parse formatter-in)
-       (time/unparse formatter-out)))
+  (loop [[format & remaining] formatters-in]
+    (if (nil? format)
+      date ;; giving up
+      (if-let [result (try
+                        (->> date
+                             (time/parse format)
+                             (time/unparse formatter-out))
+                        (catch :default e nil))]
+        result
+        ;; if it failed try the next once
+        (recur remaining)))))
 
 (defn default-target [evt booking]
   (if (= "PENALTY INTEREST" (:contractual-partner booking))
     (:penalty-target evt)
     (:source evt)))
 
+(defn fix-amount
+  "From 2023-01-01 on it seems the column AMOUNT is only populated when
+  there is a conversion, otherwise we have to resort to using column
+  ORIGINAL-TRANSACTION-AMOUNT. Some bookings event have no amount at
+  all, here we fallback to 0."
+  [amount {:keys [original-transaction-amount] :as booking}]
+  (->> [amount original-transaction-amount "0"]
+       (remove empty?)
+       first
+       js/parseFloat))
+
 (defn prepare-booking [{:keys [mappings] :as evt} booking]
   (-> booking
       (set/rename-keys {:contractual-partner :description
                         :transaction-date :iso-date})
-      (update :amount js/parseFloat)
+      (update :amount fix-amount booking)
       (update :iso-date fix-date)
       (update :invoice-date fix-date)
       (update :due-date fix-date)
@@ -118,12 +135,38 @@
 (defn drop-boring [m]
   (into {} (remove boring? m)))
 
+(defn make-key [s]
+  (-> s
+      str/lower-case
+      (str/replace #"[^\w]" "-")
+      (str/replace #"-+" "-")
+      keyword))
+
+(def crucial-keys
+  #{:contractual-partner
+    :transaction-date
+    :amount
+    :original-transaction-amount
+    :invoice-date
+    :due-date
+    :virtual-card-number})
+
+(defn assert-crucial-keys! [keys]
+  (let [missing (set/difference crucial-keys (set keys))]
+    (assert (empty? missing)
+            (str "The csv seems to be missing these crucial columns: " (prn-str missing)))))
+
+(defn bookings-from-csv [csv]
+  (let [[header & rows] csv
+        keys (map make-key header)]
+    (assert-crucial-keys! keys)
+    (map (partial zipmap keys) rows)))
+
 (defn add-bookings [evt]
   (->> evt
        :csvs
-       (map (partial drop 1))
-       (apply concat)
-       (map (partial zipmap (:header evt)))
+       (map bookings-from-csv)
+       flatten
        (map (partial prepare-booking evt))
        (map drop-boring)
        (sort-by :date)
@@ -157,7 +200,6 @@
       add-mappings
       add-files
       add-csvs
-      add-header
       add-bookings
       (dissoc :csvs)
       add-bookings-count
