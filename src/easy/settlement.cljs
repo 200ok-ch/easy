@@ -99,9 +99,9 @@
        (assoc* evt :customer)))
 
 
-(defn assert-exactly-one [x]
+(defn assert-exactly-one [ctx x]
   (case (count x)
-    0 (util/die "Expected exactly one, but got zero.")
+    0 (util/die (str "Expected exactly one, but got zero. " (prn-str ctx)))
     1 (first x) ;; unpack
     (util/die "More than one is too many.")))
 
@@ -114,7 +114,7 @@
     evt
     (->> context
          (filter #(= invoice-no (:invoice-no %)))
-         assert-exactly-one
+         (assert-exactly-one invoice-no)
          (safe-transform nil)
          (assoc* evt :invoice))))
 
