@@ -1,22 +1,18 @@
 (ns easy.settlement.item
-  (:require [cljs.spec.alpha :as s]
-            [goog.labs.format.csv :as csv]
+  (:require [clojure.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]))
-
 
 ;; TODO: This file has some code duplication with invoice items. In
 ;; fact if might not be needed at all! Because settlements get all
 ;; required "item" details from their associated invoice.
 
+;;; spec
 
-;; spec
-
-
-(s/def ::rate float?)
-(s/def ::hours float?)
+(s/def ::rate number?)
+(s/def ::hours number?)
 (s/def ::beneficiary string?)
-(s/def ::discount float?)
-(s/def ::amount float?)
+(s/def ::discount number?)
+(s/def ::amount number?)
 (s/def ::timesheet (s/and string? #(.endsWith % ".csv")))
 
 ;; TODO: Write a spec for timesheet-data. It can look like this, e.g.
@@ -43,30 +39,22 @@
                                ::discount
                                ::amount]))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {:discount 0})
 
-
 (def ^:private merge-defaults
   (partial merge defaults))
 
-
-;; helpers
-
+;;; helpers
 
 (defn- read-timesheet [item]
   (if-let [timesheet (:timesheet item)]
     (->> timesheet
-         util/slurp
-         csv/parse
-         js->clj
+         util/read-csv
          (assoc* item :timesheet-data))
     item))
-
 
 (defn- prepare-timesheet [item]
   (if-let [data (:timesheet-data item)]
@@ -80,23 +68,19 @@
          (assoc* item :timesheet-prepared))
     item))
 
-
 (defn- sum-time [timesheet-data]
   (->> timesheet-data
        (drop 1) ;; drop header
        (map second) ;; use 2nd column
-       (map js/parseFloat) ;; coerce to float
+       (map util/parse-float) ;; coerce to float
        (reduce +))) ;; sum
 
-
-;; transformers
-
+;;; transformers
 
 (defn- add-hours [item]
   (if-let [timesheet-data (:timesheet-data item)]
     (assoc* item :hours (sum-time timesheet-data))
     item))
-
 
 (defn- add-amount [item]
   (->> (map item [:rate :hours])
@@ -104,7 +88,6 @@
        ;; TODO: calculate and subtract discount
        util/round-currency
        (assoc* item :amount)))
-
 
 (defn transform [item]
   (-> item

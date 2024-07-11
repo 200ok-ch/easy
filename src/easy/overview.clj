@@ -1,11 +1,9 @@
 (ns easy.overview
   (:require [easy.config :refer [config]]))
 
-
 (defn- unsettled-invoice [evt]
   (and (= "revenue" (:type evt))
        (nil? (:settled evt))))
-
 
 ;;(defn- accumulate-debt [customer event]
 ;;  (-> customer
@@ -22,7 +20,6 @@
 ;;(defn- top-creditors [events]
 ;;  (let [unsettled (unsettled-invoice event)]
 ;;    (reduce accumulate-debt-reducer {} unsettled)))
-
 
 (defn crunch-numbers [events]
   ;;(println (top-creditors events))

@@ -1,23 +1,21 @@
-(ns easy.dctd
-  "Diner's Club Transaction Details"
-  (:require [cljs.spec.alpha :as s]
+(ns easy.pfcc
+  "Postfinance Credit Cards"
+  (:require [clojure.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
-            [lumo.util :as lumo]
-            [goog.labs.format.csv :as csv]
             [clojure.string :as str]
             [clojure.set :as set]
-            [cljs-time.core :as cljs-time]
-            [cljs-time.format :as time]
+            [clj-time.format :as format]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]
             [easy.log :as log]
-            [easy.common :as common]))
+            [easy.common :as common]
+            [clojure.java.io :as io]))
 
-;; spec
+;;; spec
 
 (def wellformed-source? (partial re-matches #"[a-zA-Z0-9:-]+"))
 
-(s/def ::type #{"dctd"})
+(s/def ::type #{"pfcc"})
 (s/def ::rules string?) ;; TODO: an existing yml file
 (s/def ::source (s/and string? wellformed-source?))
 (s/def ::path string?) ;; TODO: an existing directory
@@ -33,7 +31,7 @@
 (s/def ::note string?)
 (s/def ::description string?)
 (s/def ::target string?)
-(s/def ::amount float?)
+(s/def ::amount number?)
 
 (s/def ::transaction-event (s/keys :req-un [::iso-date
                                             ::source-path
@@ -46,7 +44,7 @@
 
 (s/def ::transaction-events (s/coll-of ::transaction-event))
 
-;; defaults
+;;; defaults
 
 (def defaults
   {:pattern "^.*\\.csv$"
@@ -55,29 +53,37 @@
 (def merge-defaults
   (partial merge defaults))
 
-;; transformers
+;;; transformers
+
+(defn parse-yaml [x]
+  (-> x
+      (util/parse-yaml {:keywords false})
+      (update-vals #(update-keys % keyword))))
+
+(defn- restructure-mappings [m]
+  (map (fn [[k v]] (assoc v :pattern k)) m))
 
 (defn add-mappings [evt]
   (->> evt
        :rules
        util/slurp
-       util/parse-yaml
+       parse-yaml
+       restructure-mappings
        (assoc* evt :mappings)))
 
 (defn add-files [evt]
   (->> evt
        :path
-       lumo/file-seq
+       util/file-seq
        (filter #(re-matches (re-pattern (:pattern evt)) %))
        (assoc* evt :files)))
 
-(defn add-csvs [evt]
+(defn add-lines [evt]
   (->> evt
        :files
-       (map util/slurp)
-       (map csv/parse)
-       (map js->clj)
-       (assoc evt :csvs)))
+       (map io/reader)
+       (mapv (comp vec line-seq))
+       (assoc evt :lines)))
 
 (defn prepare-header [header]
   (-> header
@@ -85,10 +91,10 @@
       (str/replace #" " "-")
       keyword))
 
-(def formatters-in [(time/formatter "MM.dd.yyyy")
-                    (time/formatter "MM/dd/yyyy")])
+(def formatters-in [(format/formatter "MM.dd.yyyy")
+                    (format/formatter "MM/dd/yyyy")])
 
-(def formatter-out (time/formatter "yyyy-MM-dd"))
+(def formatter-out (format/formatter "yyyy-MM-dd"))
 
 (defn fix-date [date]
   (loop [[format & remaining] formatters-in]
@@ -96,9 +102,9 @@
       date ;; giving up
       (if-let [result (try
                         (->> date
-                             (time/parse format)
-                             (time/unparse formatter-out))
-                        (catch :default e nil))]
+                             (format/parse format)
+                             (format/unparse formatter-out))
+                        (catch Throwable e nil))]
         result
         ;; if it failed try the next once
         (recur remaining)))))
@@ -117,17 +123,22 @@
   (->> [amount original-transaction-amount "0"]
        (remove empty?)
        first
-       js/parseFloat))
+       util/parse-float))
 
 (defn prepare-booking [{:keys [mappings] :as evt} booking]
+  (println "BOOKING:" booking)
   (-> booking
-      (set/rename-keys {:contractual-partner :description
-                        :transaction-date :iso-date})
-      (update :amount fix-amount booking)
-      (update :iso-date fix-date)
-      (update :invoice-date fix-date)
-      (update :due-date fix-date)
-      (merge (get mappings (keyword (:virtual-card-number booking)) {:target (default-target evt booking)}))))
+      (set/rename-keys {:account :target
+                        :booking-details :description
+                        :date :iso-date})
+      (assoc :amount (* -1 (util/parse-float (or (not-empty (:credit-in-chf booking))
+                                                 (not-empty (:debit-in-chf booking))))))
+      ;; (update :amount fix-amount booking)
+      ;; (update :iso-date fix-date)
+      ;; (update :invoice-date fix-date)
+      ;; (update :due-date fix-date)
+      ;; (merge (get mappings (keyword (:virtual-card-number booking)) {:target (default-target evt booking)}))
+      ))
 
 (defn boring? [[_ v]]
   (or (nil? v) (and (string? v) (empty? v))))
@@ -142,30 +153,32 @@
       (str/replace #"-+" "-")
       keyword))
 
-(def crucial-keys
-  #{:contractual-partner
-    :transaction-date
-    :amount
-    :original-transaction-amount
-    :invoice-date
-    :due-date
-    :virtual-card-number})
+(defn lines-reducer [{:keys [mappings header] :as agg} line]
+  (let [{:keys [account] :as booking}
+        (->> mappings
+             (filter #(re-find (-> % :pattern re-pattern) line))
+             first)]
+    (case account
+      nil (throw (ex-info "Please check the pfcc rules." {:mappings mappings}))
+      "ignore" agg
+      "header" (assoc agg :header (map make-key (str/split line #";")))
+      ;; :else
+      (update agg :bookings conj
+              (merge (zipmap header (str/split line #";")) booking)))))
 
-(defn assert-crucial-keys! [keys]
-  (let [missing (set/difference crucial-keys (set keys))]
-    (assert (empty? missing)
-            (str "The csv seems to be missing these crucial columns: " (prn-str missing)))))
+(defn bookings-from-lines [mappings lines]
+  (reduce lines-reducer {:mappings mappings} lines))
 
-(defn bookings-from-csv [csv]
-  (let [[header & rows] csv
-        keys (map make-key header)]
-    (assert-crucial-keys! keys)
-    (map (partial zipmap keys) rows)))
+(defn spy [x]
+  (println x)
+  x)
 
 (defn add-bookings [evt]
   (->> evt
-       :csvs
-       (map bookings-from-csv)
+       :lines
+       (map (partial bookings-from-lines (:mappings evt)))
+       spy
+       (map :bookings)
        flatten
        (map (partial prepare-booking evt))
        (map drop-boring)
@@ -180,7 +193,7 @@
        (assoc evt :bookings-count)))
 
 (defn add-templates [evt]
-  (->> [:templates :ledger :dctd]
+  (->> [:templates :ledger :pfcc]
        (get-in @config)
        (assoc* evt :ledger-template)))
 
@@ -193,13 +206,13 @@
 (defn build-transaction-events [evt]
   (map (partial merge (select-keys evt conveyed-keys)) (:bookings evt)))
 
-(defmethod transform :dctd [context evt]
+(defmethod transform :pfcc [context evt]
   (-> evt
       (common/validate! ::event)
       merge-defaults
       add-mappings
       add-files
-      add-csvs
+      add-lines
       add-bookings
       (dissoc :csvs)
       add-bookings-count

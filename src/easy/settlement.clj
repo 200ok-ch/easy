@@ -7,7 +7,7 @@
     invoice-no: 7.2.1
     amount: 5678.99
   ```"
-  (:require [cljs.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.log :as log]
             [easy.common :as common]
@@ -18,33 +18,29 @@
             [easy.transform :refer [transform safe-transform]]
             [easy.settlement.item :as item]
             [easy.customers :as customers]
-            [clojure.string :refer [join replace split]]
-            [cljs-time.core :as cljs-time]
-            [cljs-time.format :as time]))
-
+            [clojure.string :as str]
+            [clj-time.core :as time]))
 
 ;; TODO: add doc strings to all functions
 ;; TODO: add pre conditions to all functions
 
-
-;; spec
-
+;;; spec
 
 (def match-period (partial re-matches #"^\d{4}-(H|Q)\d$"))
 
 (s/def ::type #{"settlement"})
 (s/def ::date util/date?)
-(s/def ::amount float?) ;; this should be equal to the invoice's gross-total
+(s/def ::amount number?) ;; this should be equal to the invoice's gross-total
 (s/def ::items (s/coll-of ::item/item))
 
 (s/def ::iso-date (s/and string? common/match-iso-date))
-(s/def ::tax-rate-in float?)
-(s/def ::tax-rate-out float?)
-(s/def ::tax-in float?)
-(s/def ::tax-out float?)
-(s/def ::tax-win float?)
-(s/def ::net-total float?)
-(s/def ::remaining float?)
+(s/def ::tax-rate-in number?)
+(s/def ::tax-rate-out number?)
+(s/def ::tax-in number?)
+(s/def ::tax-out number?)
+(s/def ::tax-win number?)
+(s/def ::net-total number?)
+(s/def ::remaining number?)
 (s/def ::period (s/and string? match-period))
 (s/def ::ledger-template (s/and string? common/match-template))
 (s/def ::latex-template (s/and string? common/match-template))
@@ -76,20 +72,15 @@
                                  ::pdflatex-cmd])
                 ::invoice-no/with))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {})
 
-
 (def merge-defaults
   (partial merge defaults))
 
-
-;; helpers
-
+;;; helpers
 
 (defn lookup-customer [{id :customer-id :as evt}]
   (->> @config
@@ -98,16 +89,13 @@
        first
        (assoc* evt :customer)))
 
-
 (defn assert-exactly-one [ctx x]
   (case (count x)
     0 (util/die (str "Expected exactly one, but got zero. " (prn-str ctx)))
     1 (first x) ;; unpack
     (util/die "More than one is too many.")))
 
-
-;; transformers
-
+;;; transformers
 
 (defn resolve-invoice [{:keys [invoice-no] :as evt} context]
   (if (nil? context)
@@ -117,7 +105,6 @@
          (assert-exactly-one invoice-no)
          (safe-transform nil)
          (assoc* evt :invoice))))
-
 
 ;; this can only be infered when invoice has been resolved
 (defn add-deferral
@@ -131,11 +118,10 @@
   ```"
   [evt]
   (if-let [invoice (-> evt :invoice)]
-    (assoc* evt :deferral (not= (-> evt :date .getFullYear)
-                                (-> invoice :date .getFullYear)))
+    (assoc* evt :deferral (not= (-> evt :date time/year)
+                                (-> invoice :date time/year)))
     ;; else the evt will be returned untouched
     evt))
-
 
 (defn add-tax-in
   "The amount of taxes based in the settlement's net-total and the
@@ -149,10 +135,10 @@
   [evt]
   (log/debug-evt evt "tax-in = " (:net-total evt) " x " (-> evt :invoice :tax-rate-in))
   (->> (:net-total evt)
-       (* (-> evt :invoice :tax-rate-in))
+       (* (or (-> evt :invoice :tax-rate-in)
+              (-> evt :tax-rate-in)))
        util/round-currency
        (assoc* evt :tax-in)))
-
 
 (defn add-tax-out
   "The taxes to pay based on the amount of settlement (usually equal to
@@ -166,10 +152,10 @@
   [evt]
   (log/debug-evt evt "tax-out = " (:amount evt) " x " (-> evt :invoice :tax-rate-out))
   (->> (:amount evt)
-       (* (-> evt :invoice :tax-rate-out))
+       (* (or (-> evt :invoice :tax-rate-out)
+              (-> evt :tax-rate-out)))
        util/round-currency
        (assoc* evt :tax-out)))
-
 
 (defn add-tax-win [evt]
   (log/debug-evt evt "tax-win = " (:tax-in evt) " - " (:tax-out evt))
@@ -178,10 +164,8 @@
        util/round-currency
        (assoc* evt :tax-win)))
 
-
 (defn transform-items [evt]
   (update evt :items (partial map item/transform)))
-
 
 (defn add-net-total
   "Calculates the net-total based on the gross-total (here `amount`) and
@@ -193,10 +177,12 @@
   net-total: (/ @a (inc @t))
   ```"
   [evt]
-  (->> (/ (:amount evt) (inc (-> evt :invoice :tax-rate-in)))
+  (let [tax-rate-in (inc (or (-> evt :invoice :tax-rate-in)
+                             ;; fallback to tax-rate-in on settlement
+                             (-> evt :tax-rate-in)))]
+  (->> (/ (:amount evt) tax-rate-in)
        util/round-currency
-       (assoc* evt :net-total)))
-
+       (assoc* evt :net-total))))
 
 (defn add-delcredere [evt]
   (->> evt
@@ -205,14 +191,12 @@
        util/round-currency
        (assoc* evt :delcredere)))
 
-
 (defn add-net-total-without-delcredere [evt]
   (->> evt
        :delcredere
        (- (:net-total evt))
        util/round-currency
        (assoc* evt :net-total-without-delcredere)))
-
 
 (defn add-templates [evt]
   (-> evt
@@ -223,30 +207,25 @@
       (assoc* :ledger-template
               (get-in @config [:templates :ledger :settlement]))))
 
-
 (defn order-items-by-amount [evt]
   ;; (update evt :items (comp reverse (partial sorty-by :amount)))
   (merge evt
          {:items (reverse (sort-by :amount (:items evt)))}))
-
 
 (defn add-latex-content [evt]
   (->> evt
        templating/render-latex
        (assoc* evt :latex-content)))
 
-
 (defn add-latex-directory [evt]
   (let [directory (get-in @config [:invoice :latex :directory])]
     (->> (templating/template directory evt)
          (assoc* evt :latex-directory))))
 
-
 (defn add-latex-filename [evt]
   (let [filename (get-in @config [:invoice :latex :filename])]
     (->> (templating/template filename evt)
          (assoc* evt :latex-filename))))
-
 
 ;; TODO: refactor everything so that latex has its own submap with
 ;; content, path etc. so we can have a generic write! function which
@@ -266,19 +245,16 @@
 ;;        (map (format evt))
 ;;        (apply util/spit)))
 
-
 (defn add-pdflatex-cmd [{directory :latex-directory
                          filename :latex-filename
                          :as evt}]
   (->> (str "(cd " directory " && pdflatex " filename ")")
        (assoc* evt :pdflatex-cmd)))
 
-
 (defn run-pdflatex! [{cmd :pdflatex-cmd
                       :as evt}]
   (util/sh cmd)
   evt)
-
 
 (defn transform-latex! [evt]
   (-> evt
@@ -291,7 +267,6 @@
       run-pdflatex!
       ;; TODO: run xdg-open on the pdf file
       ))
-
 
 ;; this can only be calculated if invoice is already resolved
 (defn add-coverage [evt]
@@ -308,10 +283,8 @@
       (assoc* evt :coverage coverage))
     evt))
 
-
 (defn- add-discount-factor [evt]
-  (assoc* evt :discount-factor (/ (- 100 (-> evt :invoice :discount)) 100)))
-
+  (assoc* evt :discount-factor (/ (- 100 (-> evt :invoice :discount (or 0))) 100)))
 
 (defn add-distribution [evt]
   (let [total (-> evt :invoice :amount)]
@@ -328,7 +301,6 @@
          (map (fn [i] (assoc i :delcredere (util/round-currency (* 0.1 (:amount i))))))
          vec ;; for iterating in handlebars templates this needs to be a vector, not a list!
          (assoc* evt :distribution))))
-
 
 ;; NOTE: calling this `remainder` instead would cause a naming
 ;; collision with handlebars helpers!
@@ -351,16 +323,15 @@
         evt))
     evt))
 
-
 (defn add-debug [evt]
   (assoc* evt :debug (prn-str evt)))
-
 
 ;; `context` can be a map of types and vectors of events
 ;;
 ;; `context` can also be nil, this is the case if the event is
 ;; transformed while being resolved for another event
 (defmethod transform :settlement [context evt]
+  (println "transform settlement")
   (if context
     (log/debug-evt evt "TRANSFORM WITH CONTEXT")
     (log/debug-evt evt "TRANSFORM WITHOUT CONTEXT"))

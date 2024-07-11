@@ -8,24 +8,22 @@
     date: 2018-01-31
     description: Bankgebühren
   ```"
-  (:require [cljs.spec.alpha :as s]
-            [cljs-time.format :as time]
+  (:require [clojure.spec.alpha :as s]
             [clojure.string :as str]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.common.tax :as tax]
             [easy.config :refer [config]]
-            [easy.transform :refer [transform]]))
+            [easy.transform :refer [transform]]
+            [clj-time.core :as time]))
 
-
-;; spec
-
+;;; spec
 
 (s/def ::type #{"expense"})
 (s/def ::date util/date?)
 (s/def ::account string?)
 (s/def ::payer string?)
-(s/def ::amount float?)
+(s/def ::amount number?)
 
 (s/def ::description string?)
 (s/def ::addendum (s/or :string string?
@@ -43,25 +41,19 @@
                                 ::description-with-addendum
                                 ::ledger-template]))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {})
 
-
 (def merge-defaults
   (partial merge defaults))
 
-
-;; transformers
-
+;;; transformers
 
 (defn- add-respect-tax-rate [evt]
   (->> (tax/lookup-rate :respect-tax-rate evt)
        (assoc* evt :respect-tax-rate)))
-
 
 (defn- add-respect-tax-amount [evt]
   (->> (* (:foreign-amount evt)
@@ -70,7 +62,6 @@
        util/round-currency
        (assoc* evt :respect-tax-amount)))
 
-
 (defn- add-description-with-addendum [evt]
   (->> [:description :addendum]
        (map evt)
@@ -78,14 +69,12 @@
        (str/join " ")
        (assoc* evt :description-with-addendum)))
 
-
 (defn add-deferral [evt]
   (assoc* evt :deferral
           (if-let [invoice-date (-> evt :invoice-date)]
-            (not= (-> evt :date .getFullYear)
-                  (-> invoice-date .getFullYear))
+            (not= (-> evt :date time/year)
+                  (-> invoice-date time/year))
             false)))
-
 
 (defmethod transform :expense [_ evt]
   (-> evt

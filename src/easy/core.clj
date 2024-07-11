@@ -1,6 +1,7 @@
 (ns easy.core
   "This is the entry point. The -main function gets called from lumo.
   This namespace also provides functions for all eas subcommands."
+  (:gen-class)
   (:require [easy.util :as util]
             [easy.config :as config :refer [config]]
             [easy.customers :as customers]
@@ -11,10 +12,10 @@
             [easy.common :as common]
             [easy.log :as log]
             [easy.common.invoice-no :as invoice-no]
-            [cljs.pprint :refer [pprint]]
-            [cljs.spec.alpha :as s]
+            [clojure.pprint :refer [pprint]]
+            [clojure.spec.alpha :as s]
             [clojure.tools.cli :refer [parse-opts]]
-            [clojure.string :refer [join split replace]]
+            [clojure.string :as str]
             [clojure.walk :refer [keywordize-keys]]
             [clojure.data :refer [diff]]
             ;; NOTE: Even though we don't use any of the remaining
@@ -30,11 +31,10 @@
             easy.outlay
             easy.settlement
             easy.redistribution
-            easy.dctd))
+            easy.dctd
+            easy.pfcc))
 
-
-;; (sub-)commands
-
+;;; commands
 
 (defn ledger!
   "Transforms all events, renders and prints their ledger
@@ -50,13 +50,13 @@
          ;; TODO: do not filter when year is not given
          (filter #(.startsWith (:iso-date %) (:year options)))
          (map templating/render-ledger)
-         (join "\n")
+         (str/join "\n")
          println)))
-
 
 (defn invoice!
   "Generates an invoice PDF and prints a report."
   [events options]
+  (println "invoice")
   (let [context (util/bin-by (comp keyword :type) events)]
     (->> events
          (filter #(= "invoice" (:type %)))
@@ -68,7 +68,6 @@
          invoice/transform-latex!
          templating/render-report
          println)))
-
 
 (defn transform!
   "Transforms all input events pretty prints the result and exits."
@@ -85,12 +84,10 @@
          ;; prn-str
          println)))
 
-
 (defn noop!
   "Does nothing."
   []
   (do))
-
 
 (defn validate!
   "Validates all input events and exits. Good to check for warnings."
@@ -100,7 +97,6 @@
          (map (partial safe-transform context))
          flatten
          doall)))
-
 
 (defn overview!
   "Renders an overview."
@@ -113,25 +109,7 @@
          templating/render-overview
          println)))
 
-
-;; main
-
-
-(defn read-stdin
-  "Reads from standard in until end, then calls `callback` with the
-  result as its argument."
-  [callback]
-  (let [stdin process.stdin
-        input (atom [])
-        receive-data (partial swap! input conj)
-        receive-end (fn []
-                      (swap! input join)
-                      (callback @input))]
-    (.resume stdin)
-    (.setEncoding stdin "utf8")
-    (.on stdin "data" receive-data)
-    (.on stdin "end" receive-end)))
-
+;;; main
 
 (defn run
   "Dispatches to a command function and exits the process afterwards."
@@ -152,23 +130,21 @@
       :overview (overview! events options)
       (do ;; <- else
         (println (str "Unknown command: " command))
-        (process.exit 1)))
+        (util/exit 1)))
     ;; all good, exit nicely
-    (process.exit 0)))
-
+    (util/exit 0)))
 
 ;; FIXME: find a nice syntax to pass filters reliably via commandline
 ;; args
 (defn- parse-filter [arg]
   ;;(println arg)
-  ;;(process.exit 0)
+  ;;(util/exit 0)
   (read-string arg))
 ;;   (->> (split arg #",")
 ;;        (map #(split % #"="))
 ;;        flatten
 ;;        (apply hash-map)
 ;;        keywordize-keys))
-
 
 (def cli-options
   [["-d" "--debug" "Debug output"]
@@ -177,29 +153,21 @@
    ["-n" "--no NUMBER" "Invoice No (only applies to the subcommand: invoice)"]
    ["-f" "--filter FILTER" "Filter (only applies to the subcommand: transform)" :parse-fn parse-filter]])
 
-
-;; TODO: get rid of the warning by using reader conditionals in
-;;
-;;   https://github.com/clojure/tools.cli/blob/master/src/main/clojure/clojure/tools/cli.cljc
-;;
-;; Wouldn't this be a nice open source contribution? Achieve some
-;; laurels! Do it! Now!
 (defn -main
   "The main function which is called by lumo. It builds the environment
   and reads the input, then dispatches to `run`."
   [& args]
   (let [cli (parse-opts args cli-options)
         command (-> cli :arguments first keyword)
-        options (-> cli :options)
+        options (-> cli :options doall)
         ;; TODO: check early if `command` was given
         ;; TODO: build env here, doesn't need to be an atom!
         runner (partial run command options)]
     (config/load!)
     (swap! config assoc :options cli)
     (swap! config assoc :customers (customers/load))
-
     (if-let [path (-> cli :options :input)]
       ;; read yaml for path then call `run`
-      (runner (util/slurp path))
+      (runner (slurp path))
       ;; else read input from stdin then call `run`
-      (read-stdin runner))))
+      (runner (slurp *in*)))))
