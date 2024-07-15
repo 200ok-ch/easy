@@ -17,7 +17,7 @@
 
 ;; TODO: don't read and parse the same template over and over again
 (defn- apply-template [template-key event]
-  ;; (println (:type event) " " (:source event))
+  ;; (println (:type event) (:source event) (template-key event))
   (let [path (template-key event)
         ;; _ (println "hello" path)
         source (util/slurp path)]

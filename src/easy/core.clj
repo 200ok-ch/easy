@@ -18,6 +18,7 @@
             [clojure.string :as str]
             [clojure.walk :refer [keywordize-keys]]
             [clojure.data :refer [diff]]
+            [clojure.pprint :as pprint]
             ;; NOTE: Even though we don't use any of the remaining
             ;; namespaces in this list, we nevertheless have to
             ;; require them here, otherwise they won't get loaded at
@@ -34,7 +35,34 @@
             easy.dctd
             easy.pfcc))
 
-;;; commands
+(defn- read-and-parse
+  "Reads & parses YAML files (incl. applying any frontmatter event
+  templates & source annotation)."
+  [path]
+  (println "READ-AND-PARSE" path)
+  (-> path
+      util/slurp
+      util/parse-yaml
+      (util/annotate path)))
+
+(defn- harmonize [events]
+  (map (partial util/harmonize-date-field :date) events))
+
+;;; special commands
+
+(defn collect! [cli]
+  (let [path (or (-> cli :arguments second) ".")]
+    (->> path
+         util/file-seq
+         (filter #(re-matches #"[^.].*\.yml$" %))
+          (map read-and-parse)
+          (apply concat)
+          harmonize
+          (sort-by :date)
+          util/write-yaml
+          println)))
+
+;;; commands over events
 
 (defn ledger!
   "Transforms all events, renders and prints their ledger
@@ -56,7 +84,6 @@
 (defn invoice!
   "Generates an invoice PDF and prints a report."
   [events options]
-  (println "invoice")
   (let [context (util/bin-by (comp keyword :type) events)]
     (->> events
          (filter #(= "invoice" (:type %)))
@@ -163,11 +190,14 @@
         ;; TODO: check early if `command` was given
         ;; TODO: build env here, doesn't need to be an atom!
         runner (partial run command options)]
-    (config/load!)
-    (swap! config assoc :options cli)
-    (swap! config assoc :customers (customers/load))
-    (if-let [path (-> cli :options :input)]
-      ;; read yaml for path then call `run`
-      (runner (slurp path))
-      ;; else read input from stdin then call `run`
-      (runner (slurp *in*)))))
+    (if (#{:collect} command)
+      (collect! cli)
+      (do
+        (config/load!)
+        (swap! config assoc :options cli)
+        (swap! config assoc :customers (customers/load))
+        (if-let [path (-> cli :options :input)]
+          ;; read yaml for path then call `run`
+          (runner (slurp path))
+          ;; else read input from stdin then call `run`
+          (runner (slurp *in*)))))))

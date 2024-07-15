@@ -90,11 +90,12 @@
           (assoc* :hours sum))) ;; this might be overridden
     item))
 
-(defn- add-amount [item]
-  (->> (map item [:rate :hours])
-       (apply *)
-       util/round-currency
-       (assoc* item :amount)))
+(defn- add-amount [{:keys [rate hours] :as item}]
+  (if (and rate hours)
+    (->> (* rate hours)
+         util/round-currency
+         (assoc* item :amount))
+    item))
 
 (defn- add-amount-with-discount-and-delcredere [item invoice]
   (->> (/ (invoice :discount) 100)

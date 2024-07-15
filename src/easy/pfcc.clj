@@ -126,10 +126,9 @@
        util/parse-float))
 
 (defn prepare-booking [{:keys [mappings] :as evt} booking]
-  (println "BOOKING:" booking)
+  (println "BOOKING:" booking) ;; DEBUGGING
   (-> booking
       (set/rename-keys {:account :target
-                        :booking-details :description
                         :date :iso-date})
       (assoc :amount (* -1 (util/parse-float (or (not-empty (:credit-in-chf booking))
                                                  (not-empty (:debit-in-chf booking))))))

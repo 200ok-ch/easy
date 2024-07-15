@@ -135,8 +135,7 @@
   [evt]
   (log/debug-evt evt "tax-in = " (:net-total evt) " x " (-> evt :invoice :tax-rate-in))
   (->> (:net-total evt)
-       (* (or (-> evt :invoice :tax-rate-in)
-              (-> evt :tax-rate-in)))
+       (* (-> evt :invoice :tax-rate-in (or 0)))
        util/round-currency
        (assoc* evt :tax-in)))
 
@@ -152,8 +151,7 @@
   [evt]
   (log/debug-evt evt "tax-out = " (:amount evt) " x " (-> evt :invoice :tax-rate-out))
   (->> (:amount evt)
-       (* (or (-> evt :invoice :tax-rate-out)
-              (-> evt :tax-rate-out)))
+       (* (-> evt :invoice :tax-rate-out (or 0)))
        util/round-currency
        (assoc* evt :tax-out)))
 
@@ -177,12 +175,10 @@
   net-total: (/ @a (inc @t))
   ```"
   [evt]
-  (let [tax-rate-in (inc (or (-> evt :invoice :tax-rate-in)
-                             ;; fallback to tax-rate-in on settlement
-                             (-> evt :tax-rate-in)))]
-  (->> (/ (:amount evt) tax-rate-in)
-       util/round-currency
-       (assoc* evt :net-total))))
+  (let [tax-rate-in (-> evt :invoice :tax-rate-in (or 0) inc)]
+    (->> (/ (:amount evt) tax-rate-in)
+         util/round-currency
+         (assoc* evt :net-total))))
 
 (defn add-delcredere [evt]
   (->> evt
@@ -331,7 +327,6 @@
 ;; `context` can also be nil, this is the case if the event is
 ;; transformed while being resolved for another event
 (defmethod transform :settlement [context evt]
-  (println "transform settlement")
   (if context
     (log/debug-evt evt "TRANSFORM WITH CONTEXT")
     (log/debug-evt evt "TRANSFORM WITHOUT CONTEXT"))

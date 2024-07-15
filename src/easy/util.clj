@@ -96,15 +96,18 @@
   agg)
 
 (defmethod doc-reducer :sequential [{:keys [template] :as aggregator} events]
+  (println "SEQ")
   (update aggregator :events concat (map (partial merge template) events)))
 
 (defmethod doc-reducer :map [{:keys [template] :as aggregator} new-template]
+  (println "MAP")
   (assoc aggregator :template new-template))
 
 (defn apply-templates [docs]
   ;; Handle one special case, when there is only one doc then return
   ;; it, this allows to read YAML documents that don't hold events to
   ;; be read by the same means
+  (println "-------------------------------------------------------------------------------- " (count docs) (type docs) (-> docs first type))
   (if (= 1 (count docs))
     (first docs)
     (:events (reduce doc-reducer {:template {} :events []} docs))))
@@ -134,15 +137,18 @@
   ;; clj-commons/clj-yaml cannot handle multiple docs per file :(
   (as-> string %
     (str/split % #"\n---\n")
-    (map yaml/parse-string % (merge {:tags custom-yaml-tags} opts))
+    (mapv yaml/parse-string % (merge {:tags custom-yaml-tags} opts))
     (remove nil? %)
     (apply-templates %)
     (convert-dates %)))
+
+(str/split "---\nhello: world" #"(^|\n)---\n")
 
 (defn annotate
   "Annotates all events with `:source-path '<path>:e<index>'`, where
   index is the position of the event in the source file."
   [events path]
+  ;; (pprint (type (doall events)))
   (map-indexed #(assoc %2 :source-path (str path ":e" %1)) events))
 
 (defn date? [x]
@@ -169,7 +175,7 @@
   (format/formatter "yyyy-MM-dd"))
 
 (def round-currency
-  (comp edn/read-string (partial format "%.2f")))
+  (comp edn/read-string (partial format "%.2f") float))
 
 (defn include? [item collection]
   (some #{item} collection))

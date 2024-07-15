@@ -55,12 +55,14 @@
   (->> (tax/lookup-rate :respect-tax-rate evt)
        (assoc* evt :respect-tax-rate)))
 
-(defn- add-respect-tax-amount [evt]
-  (->> (* (:foreign-amount evt)
-          (:exchange-rate evt)
-          (:respect-tax-rate evt))
-       util/round-currency
-       (assoc* evt :respect-tax-amount)))
+(defn- add-respect-tax-amount [{:keys [foreign-amount
+                                       exchange-rate
+                                       respect-tax-rate] :as evt}]
+  (if (and foreign-amount exchange-rate respect-tax-rate)
+    (->> (* foreign-amount exchange-rate respect-tax-rate)
+         util/round-currency
+         (assoc* evt :respect-tax-amount))
+    evt))
 
 (defn- add-description-with-addendum [evt]
   (->> [:description :addendum]

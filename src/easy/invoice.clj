@@ -231,7 +231,7 @@
 (defn add-deadline-iso-date [evt]
   (as-> evt %
     (:date %)
-    (time/plus % (:deadline evt))
+    (time/plus % (time/days (:deadline evt)))
     (common/make-iso-date %)
     (assoc* evt :deadline-iso-date %)))
 
