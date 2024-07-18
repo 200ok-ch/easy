@@ -221,3 +221,5 @@
   org.joda.time.DateTime
   (encode [data]
     (format/unparse iso-formatter data)))
+
+(def format clojure.core/format)
