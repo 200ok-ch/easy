@@ -39,7 +39,7 @@
   "Reads & parses YAML files (incl. applying any frontmatter event
   templates & source annotation)."
   [path]
-  (println "READ-AND-PARSE" path)
+  (util/warn "DEBUG READ-AND-PARSE" path)
   (-> path
       util/slurp
       util/parse-yaml

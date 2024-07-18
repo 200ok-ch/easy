@@ -11,7 +11,8 @@
             [clojure.edn :as edn]
             [clojure.walk :as walk]
             [clojure.data.csv :as csv])
-  (:import java.util.Date))
+  (:import java.util.Date
+           org.joda.time.DateTime))
 
 (defn parse-float [s]
   (Float/parseFloat s))
@@ -96,24 +97,24 @@
   agg)
 
 (defmethod doc-reducer :sequential [{:keys [template] :as aggregator} events]
-  (println "SEQ")
+  (warn "DEBUG" "SEQ")
   (update aggregator :events concat (map (partial merge template) events)))
 
 (defmethod doc-reducer :map [{:keys [template] :as aggregator} new-template]
-  (println "MAP")
+  (warn "DEBUG" "MAP")
   (assoc aggregator :template new-template))
 
 (defn apply-templates [docs]
   ;; Handle one special case, when there is only one doc then return
   ;; it, this allows to read YAML documents that don't hold events to
   ;; be read by the same means
-  (println "-------------------------------------------------------------------------------- " (count docs) (type docs) (-> docs first type))
+  ;; (println "-------------------------------------------------------------------------------- " (count docs) (type docs) (-> docs first type))
   (if (= 1 (count docs))
     (first docs)
     (:events (reduce doc-reducer {:template {} :events []} docs))))
 
-(defn- parse-yaml-date [date-str]
-  (println "parsing date" date-str)
+(defn parse-yaml-date [date-str]
+  (warn "DEBUG parsing date" date-str)
   (format/parse (format/formatter "yyyy-MM-dd") date-str))
 
 (def ^:private custom-yaml-tags
@@ -134,15 +135,9 @@
   event templates (associatives) to YAML event lists (sequentials) and
   concatenating these lists."
   [string & {:as opts}]
-  ;; clj-commons/clj-yaml cannot handle multiple docs per file :(
-  (as-> string %
-    (str/split % #"\n---\n")
-    (mapv yaml/parse-string % (merge {:tags custom-yaml-tags} opts))
-    (remove nil? %)
-    (apply-templates %)
-    (convert-dates %)))
-
-(str/split "---\nhello: world" #"(^|\n)---\n")
+  (->> (yaml/parse-string string (merge {:load-all true} opts))
+       apply-templates
+       convert-dates))
 
 (defn annotate
   "Annotates all events with `:source-path '<path>:e<index>'`, where
@@ -211,14 +206,18 @@
     x))
 
 (defn harmonize-date-field [field evt]
+  ;; (println field (type (field evt)))
   (if-let [date (field evt)]
     (if (string? date)
-      ;; NOTE don't use this, this does not return an instance of Date
-      ;; (assoc evt field (format/parse util/iso-formatter date))
-      (assoc evt field (Date. date))
+      (assoc evt field (parse-yaml-date date))
       evt)
     evt))
 
 (defn assert-only-one! [msg x]
   (assert (= 1 (count x)) msg)
   x)
+
+(extend-protocol yaml/YAMLCodec
+  org.joda.time.DateTime
+  (encode [data]
+    (format/unparse iso-formatter data)))

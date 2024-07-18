@@ -71,6 +71,11 @@
        (str/join " ")
        (assoc* evt :description-with-addendum)))
 
+(defn fix-invoice-date [evt]
+  (if (:invoice-date evt)
+    (update evt :invoice-date util/parse-yaml-date)
+    evt))
+
 (defn add-deferral [evt]
   (assoc* evt :deferral
           (if-let [invoice-date (-> evt :invoice-date)]
@@ -85,6 +90,7 @@
       add-respect-tax-rate
       add-respect-tax-amount
       tax/add-period
+      fix-invoice-date
       add-deferral
       add-description-with-addendum
       (assoc* :ledger-template

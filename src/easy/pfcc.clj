@@ -9,7 +9,8 @@
             [easy.transform :refer [transform]]
             [easy.log :as log]
             [easy.common :as common]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.pprint :refer [pprint]]))
 
 ;;; spec
 
@@ -72,6 +73,7 @@
        (assoc* evt :mappings)))
 
 (defn add-files [evt]
+  (util/warn "DEBUG" evt)
   (->> evt
        :path
        util/file-seq
@@ -126,7 +128,7 @@
        util/parse-float))
 
 (defn prepare-booking [{:keys [mappings] :as evt} booking]
-  (println "BOOKING:" booking) ;; DEBUGGING
+  (util/warn "DEBUG BOOKING:" booking) ;; DEBUGGING
   (-> booking
       (set/rename-keys {:account :target
                         :date :iso-date})
@@ -153,6 +155,7 @@
       keyword))
 
 (defn lines-reducer [{:keys [mappings header] :as agg} line]
+  (util/warn "DEBUG" line)
   (let [{:keys [account] :as booking}
         (->> mappings
              (filter #(re-find (-> % :pattern re-pattern) line))
@@ -169,7 +172,7 @@
   (reduce lines-reducer {:mappings mappings} lines))
 
 (defn spy [x]
-  (println x)
+  (util/warn "DEBUG" x)
   x)
 
 (defn add-bookings [evt]
