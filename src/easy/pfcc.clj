@@ -134,6 +134,7 @@
                         :date :iso-date})
       (assoc :amount (* -1 (util/parse-float (or (not-empty (:credit-in-chf booking))
                                                  (not-empty (:debit-in-chf booking))))))
+      (update :amount util/round-currency)
       ;; (update :amount fix-amount booking)
       ;; (update :iso-date fix-date)
       ;; (update :invoice-date fix-date)

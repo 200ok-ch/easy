@@ -79,6 +79,8 @@
          (filter #(.startsWith (:iso-date %) (:year options)))
          ;; make the order reproducible
          (sort-by :source-path)
+         ;; TODO: this should instead be done by each type
+         (map #(update % :amount util/int-if-whole))
          (map templating/render-ledger)
          (str/join "\n")
          println)))
