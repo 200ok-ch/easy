@@ -21,6 +21,8 @@
 (s/def ::type #{"reconciliation"})
 (s/def ::date util/date?)
 (s/def ::amount number?)
+(s/def ::share number?)
+(s/def ::participants (s/coll-of string?))
 (s/def ::account string?)
 
 (s/def ::description string?)
@@ -31,8 +33,10 @@
 (s/def ::event (s/keys :req-un [::type
                                 ::date
                                 ::amount
+                                ::participants
                                 ::account]
-                       :opt-un [::description]))
+                       :opt-un [::description
+                                ::share]))
 
 ;;; defaults
 
@@ -48,6 +52,7 @@
   (-> evt
       (common/validate! ::event)
       common/add-iso-date
+      (assoc :share (/ (:amount evt) (-> evt :participants count)))
       (assoc* :ledger-state "*") ;; always cleared
       (assoc* :ledger-template
               (get-in @config [:templates :ledger :reconciliation]))
