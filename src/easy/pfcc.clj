@@ -173,7 +173,7 @@
   (reduce lines-reducer {:mappings mappings} lines))
 
 (defn spy [x]
-  (util/warn "DEBUG" x)
+  (util/warn "PFCC DEBUG" x)
   x)
 
 (defn add-bookings [evt]

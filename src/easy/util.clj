@@ -14,7 +14,7 @@
   (:import java.util.Date
            org.joda.time.DateTime))
 
-(defn- int-if-whole [x]
+(defn int-if-whole [x]
   (when x
     (if (-> x int float #{x})
       (int x)
