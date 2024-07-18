@@ -243,7 +243,6 @@
                      filename :latex-filename
                      content :latex-content
                      :as evt}]
-  (util/sh "mkdir -p" directory)
   ;; TODO: use some path join here
   (-> (str directory "/" filename)
       (util/spit content))

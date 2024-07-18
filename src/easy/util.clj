@@ -54,7 +54,7 @@
   args)
 
 (defn sh [& args]
-  (apply shell/sh args))
+  (shell/sh "sh" "-c" (str/join " " args)))
 
 (defn spy [& args]
   (apply pprint args)
@@ -66,8 +66,9 @@
 (def slurp
   clojure.core/slurp)
 
-(def spit
-  clojure.core/spit)
+(defn spit [path content]
+  (io/make-parents path)
+  (clojure.core/spit path content))
 
 (def file-seq
   (comp (partial map (memfn getPath))
