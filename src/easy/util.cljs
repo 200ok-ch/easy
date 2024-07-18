@@ -202,3 +202,5 @@
 (defn assert-only-one! [msg x]
   (assert (= 1 (count x)) msg)
   x)
+
+(def format sprintf) ;; clojure.core/format

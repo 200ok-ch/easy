@@ -29,7 +29,7 @@
 
 (s/def ::iso-date string?)
 (s/def ::source-path string?)
-(s/def ::index int?)
+(s/def ::index string?)
 (s/def ::note string?)
 (s/def ::description string?)
 (s/def ::target string?)
@@ -163,15 +163,20 @@
     (map (partial zipmap keys) rows)))
 
 (defn add-bookings [evt]
-  (->> evt
-       :csvs
-       (map bookings-from-csv)
-       flatten
-       (map (partial prepare-booking evt))
-       (map drop-boring)
-       (sort-by :date)
-       (map-indexed #(assoc %2 :index %1))
-       (assoc* evt :bookings)))
+  (let [entries (->> evt
+                     :csvs
+                     (map bookings-from-csv)
+                     flatten)
+        ;; how many digits do we need to represent all entries
+        digits (-> entries count str count)
+        ;; pad lower numbers with zeros for sortability
+        template (str "%0" digits "d")]
+    (->> entries
+         (map (partial prepare-booking evt))
+         (map drop-boring)
+         (sort-by :date)
+         (map-indexed #(assoc %2 :index (util/format template %1)))
+         (assoc* evt :bookings))))
 
 (defn add-bookings-count [evt]
   (->> evt
