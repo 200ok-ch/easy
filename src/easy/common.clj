@@ -1,13 +1,12 @@
 (ns easy.common
   "This namespace covers the common requirements for all events."
-  (:require [cljs.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
-            [cljs-time.core :as cljs-time]
-            [cljs-time.format :as time]))
+            [clj-time.core :as time]
+            [clj-time.coerce :as coerce]
+            [clj-time.format :as format]))
 
-
-;; spec
-
+;;; spec
 
 (def match-iso-date (partial re-matches #"^\d{4}-\d\d-\d\d$"))
 (def match-template (partial re-matches #".*\.hbs"))
@@ -26,7 +25,8 @@
                 "salary"           ;; Gehalt
                 "outlay"           ;; Spesenabrechnung
                 "redistribution"   ;; "200ok Sozialfaktor"
-                "dctd"})           ;; Diner's Club Transaction Details
+                "dctd"             ;; Diner's Club Transaction Details
+                "pfcc"})           ;; Postfinance Credit Cards
 
 (s/def ::date (s/or :date util/date?
                     :iso-string (s/and string? match-iso-date)))
@@ -39,9 +39,7 @@
                                 ::file]))
 (s/def ::events (s/coll-of ::event))
 
-
-;; helpers
-
+;;; helpers
 
 (defn ignore-warning?
   "Checks if `evt` has `:ignore-warnings` set for `key`."
@@ -49,27 +47,21 @@
   (->> (get evt :ignore-warnings [])
        (util/include? (name key))))
 
-
 (defn harmonize [evt]
   (->> evt
        (util/harmonize-date-field :date)
        ;; TODO: remove, we don' use `:settled` anymore
        (util/harmonize-date-field :settled)))
 
-
 (defn validate!
   "Same as `util/validate!`, but with arguments swapped."
   [x spec]
   (util/validate! spec x))
 
-
 (defn make-iso-date [date]
-  (->> date
-       cljs-time/date-time
-       (time/unparse util/iso-formatter)))
+  (format/unparse util/iso-formatter date))
 
-
-;; transformers
+;;; transformers
 
 (defn add-iso-date
   "Transformer that takes the value of `:date`, builds an iso-date

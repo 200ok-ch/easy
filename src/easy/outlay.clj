@@ -8,7 +8,7 @@
     amount: 2919.79
     receipt: 10
   ```"
-  (:require [cljs.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.config :refer [config]]
@@ -17,13 +17,11 @@
             ;; [easy.outlay.payer :as payer]
             ))
 
-
-;; spec
-
+;;; spec
 
 (s/def ::type #{"outlay"})
 (s/def ::date util/date?)
-(s/def ::amount float?)
+(s/def ::amount number?)
 (s/def ::beneficiary string?)
 
 (s/def ::description string?)
@@ -42,9 +40,7 @@
                                 ::details
                                 ::payers]))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {})
@@ -52,9 +48,7 @@
 (def merge-defaults
   (partial merge defaults))
 
-
-;; transformers
-
+;;; transformers
 
 (defmethod transform :outlay [_ evt]
   (-> evt

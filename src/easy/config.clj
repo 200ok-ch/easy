@@ -1,9 +1,7 @@
 (ns easy.config
   (:require [easy.util :as util]))
 
-
 ;; TODO: `config` should probably instead be named `environment`
-
 
 (def default-config
   "The easy config file is a YAML file with the following structure, e.g.
@@ -48,13 +46,14 @@
     :report
     {:template "templates/report.txt.hbs"}}})
 
-
 (def config (atom default-config))
 
+(defn load-config-file []
+  (if (util/file-exists? ".easy.yml")
+    (util/parse-yaml (slurp ".easy.yml"))
+    {}))
 
 (defn load! []
-  ;; TODO: check if file exists, otherwise print a helpful error
-  ;; message
-  (->> (util/slurp ".easy.yml")
-       util/parse-yaml
-       (swap! config util/deep-merge)))
+  (swap! config
+         util/deep-merge
+         (load-config-file)))

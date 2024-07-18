@@ -1,15 +1,14 @@
 (ns easy.common.tax
-  (:require [cljs.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [easy.config :refer [config]]
             [easy.util :as util :refer [assoc*]]
             [easy.log :as log]
-            [easy.common :as common]))
-
+            [easy.common :as common]
+            [clj-time.core :as time]))
 
 ;; specs
 
-
-(s/def ::rate (s/and float? #(< 0 %) #(> 1 %)))
+(s/def ::rate (s/and number? #(< 0 %) #(> 1 %)))
 (s/def ::since util/date?)
 (s/def ::until util/date?)
 
@@ -19,9 +18,7 @@
 
 (s/def ::rates (s/coll-of ::rate-entry :kind vector?))
 
-
 ;; helpers
-
 
 (defn- assert-exactly-one [coll]
   (case (count coll)
@@ -36,28 +33,25 @@
                       "Just picked the first from " coll))
       (first coll))))
 
-
 (defn lookup-rate
   [key {:keys [date]}]
   (->> @config
        key
        ;; TODO: use `(common/validate! ::rates)` here
-       (filter #(or (nil? (:since %)) (>= date (:since %))))
-       (filter #(or (nil? (:until %)) (<= date (:until %))))
+       (filter #(or (nil? (:since %)) (not (time/before? date (:since %)))))
+       (filter #(or (nil? (:until %)) (not (time/after? date (:until %)))))
        assert-exactly-one
        :rate))
 
-
 ;; transformers
-
 
 (defn add-period
   "The period is when the vat is due."
   ([evt] (add-period evt [:date]))
   ([evt date-path]
    (if-let [date (get-in evt date-path)]
-     (let [year (.getFullYear date)
-           semester (if (< (.getMonth date) 6) 1 2)
+     (let [year (time/year date)
+           semester (if (< (time/month date) 6) 1 2)
            period (str year "-H" semester)]
        (assoc* evt :period period))
      ;; no date found, in context of a nested transform, that's ok

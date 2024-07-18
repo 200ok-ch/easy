@@ -5,11 +5,9 @@
   (:require [easy.util :as util]
             [easy.config :refer [config]]))
 
-
 (defmulti transform
   "Events will be transformed based on their type."
   (fn [_ e] (-> e :type keyword)))
-
 
 (defmethod transform :default [_ event]
   (util/warn (str "WARNING: No method in multimethod "
@@ -20,11 +18,9 @@
   ;; TODO: use default transformation!
   event)
 
-
 ;; silently ignoring transformation of nil
 (defmethod transform nil [_ _]
   nil)
-
 
 (defn safe-transform [ctx evt]
   (if (-> @config :options :options :debug)
@@ -32,9 +28,9 @@
                   (util/indent (util/write-yaml evt) 2))))
   (try
     (transform ctx evt)
-    (catch :default e
+    (catch Throwable e
       (util/warn (str "Transform failed with `"
                       e "` on\n\n" (util/write-yaml evt)
-                      "\n" (.-stack e)))
-      (process.exit 1) ;; halt on error
+                      (apply str (interpose "\n" (.getStackTrace e)))))
+      (util/exit 1) ;; halt on error
       evt)))

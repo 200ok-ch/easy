@@ -10,19 +10,17 @@
   Warning: this is subject to change. A reconciliation event should be
   handle to handle a list of accounts that need to be **zero'd** by
   distributing their funds equaly over other accounts."
-  (:require [cljs.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]))
 
-
-;; spec
-
+;;; spec
 
 (s/def ::type #{"reconciliation"})
 (s/def ::date util/date?)
-(s/def ::amount float?)
+(s/def ::amount number?)
 (s/def ::account string?)
 
 (s/def ::description string?)
@@ -36,9 +34,7 @@
                                 ::account]
                        :opt-un [::description]))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {})
@@ -46,9 +42,7 @@
 (def merge-defaults
   (partial merge defaults))
 
-
-;; transformers
-
+;;; transformers
 
 (defmethod transform :reconciliation [_ evt]
   (-> evt

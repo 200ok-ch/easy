@@ -1,18 +1,28 @@
-(ns easy.salary
-  "This is not used, yet!"
-  (:require [cljs.spec.alpha :as s]
+(ns easy.opening
+  "The begining of an *opening* event example:
+  ```
+  - type: opening
+    date: 2018-01-01
+    items:
+      - account: 'Aktiva:1010-Postfinance'
+        amount: 1234.12
+      - account: 'Aktiva:1100-Forderungen-aus-Lieferungen-und-Leistungen'
+        amount: 4321.21
+      - account: 'Aktiva:1109-Wertberichtigungen-FLL'
+        amount: -2340
+  ...
+  ```"
+  (:require [clojure.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]
-            [easy.salary.items :as items]))
+            [easy.opening.items :as items]))
 
+;;; spec
 
-;; spec
-
-
-(s/def ::type #{"salary"})
-(s/def ::date util/date?)
+(s/def ::type #{"opening"})
+(s/def ::date util/date?) ;; TODO: opening should always be on 1st of January
 (s/def ::items (s/coll-of ::items/item))
 
 (s/def ::iso-date (s/and string? common/match-iso-date))
@@ -24,9 +34,7 @@
                        :opt-un [::iso-date
                                 ::ledger-template]))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {})
@@ -34,14 +42,12 @@
 (def merge-defaults
   (partial merge defaults))
 
+;;; transformers
 
-;; transformers
-
-
-(defmethod transform :salary [_ evt]
+(defmethod transform :opening [_ evt]
   (-> evt
       (common/validate! ::event)
       common/add-iso-date
       (assoc* :ledger-template
-              (get-in @config [:templates :ledger :salary]))
+              (get-in @config [:templates :ledger :opening]))
       (common/validate! ::event)))

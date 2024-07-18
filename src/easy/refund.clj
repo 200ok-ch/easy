@@ -7,19 +7,17 @@
     amount: 1234.56
     source: 8900-Direkte-Steuern
   ```"
-  (:require [cljs.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]))
 
-
-;; spec
-
+;;; spec
 
 (s/def ::type #{"refund"})
 (s/def ::date util/date?)
-(s/def ::amount float?)
+(s/def ::amount number?)
 (s/def ::beneficiary string?)
 
 (s/def ::description string?)
@@ -33,20 +31,15 @@
                        :opt-un [::description
                                 ::beneficiary]))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {})
 
-
 (def merge-defaults
   (partial merge defaults))
 
-
-;; transformers
-
+;;; transformers
 
 (defmethod transform :refund [_ evt]
   (-> evt

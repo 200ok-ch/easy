@@ -1,19 +1,15 @@
 (ns easy.salary.items
-  (:require [cljs.spec.alpha :as s]))
+  (:require [clojure.spec.alpha :as s]))
 
-
-;; spec
-
+;;; spec
 
 (s/def ::beneficiary string?)
-(s/def ::amount float?)
+(s/def ::amount number?)
 
 (s/def ::item (s/keys :req-un [::beneficiary
                                ::amount]))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {})
