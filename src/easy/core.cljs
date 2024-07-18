@@ -49,6 +49,8 @@
          ;; filter to the events that belong to the year given with -y
          ;; TODO: do not filter when year is not given
          (filter #(.startsWith (:iso-date %) (:year options)))
+         ;; make the order reproducible
+         (sort-by :source-path)
          (map templating/render-ledger)
          (join "\n")
          println)))
