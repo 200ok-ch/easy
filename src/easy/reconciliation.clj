@@ -10,19 +10,19 @@
   Warning: this is subject to change. A reconciliation event should be
   handle to handle a list of accounts that need to be **zero'd** by
   distributing their funds equaly over other accounts."
-  (:require [cljs.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]))
 
-
-;; spec
-
+;;; spec
 
 (s/def ::type #{"reconciliation"})
 (s/def ::date util/date?)
-(s/def ::amount float?)
+(s/def ::amount number?)
+(s/def ::share number?)
+(s/def ::participants (s/coll-of string?))
 (s/def ::account string?)
 
 (s/def ::description string?)
@@ -33,12 +33,12 @@
 (s/def ::event (s/keys :req-un [::type
                                 ::date
                                 ::amount
+                                ::participants
                                 ::account]
-                       :opt-un [::description]))
+                       :opt-un [::description
+                                ::share]))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {})
@@ -46,14 +46,13 @@
 (def merge-defaults
   (partial merge defaults))
 
-
-;; transformers
-
+;;; transformers
 
 (defmethod transform :reconciliation [_ evt]
   (-> evt
       (common/validate! ::event)
       common/add-iso-date
+      (assoc :share (/ (:amount evt) (-> evt :participants count)))
       (assoc* :ledger-state "*") ;; always cleared
       (assoc* :ledger-template
               (get-in @config [:templates :ledger :reconciliation]))

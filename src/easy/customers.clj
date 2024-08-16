@@ -22,15 +22,14 @@
       8004 Zürich
     contact: staff
   ```"
-  (:require [cljs.spec.alpha :as s]
+  (:refer-clojure :exclude [load])
+  (:require [clojure.spec.alpha :as s]
             [clojure.pprint :refer [pprint]]
-            [clojure.string :refer [replace join]]
+            [clojure.string :as str]
             [easy.util :as util :refer [assoc*]]
             [easy.config :refer [config]]))
 
-
-;; spec
-
+;;; spec
 
 ;; NOTE: minimum 3 maximum 10 characters is a sensible limits for
 ;; customers' shortnames
@@ -41,9 +40,9 @@
 (s/def ::address string?) ;; multiline postal address
 (s/def ::shortname (s/and string? match-shortname))
 
-(s/def ::discount (s/and float? #(>= % 0) #(< % 100))) ;; a general discount in percentage
+(s/def ::discount (s/and number? #(>= % 0) #(< % 100))) ;; a general discount in percentage
 (s/def ::contact string?)
-(s/def ::rate float?) ;; the default hourly rate for a given customer
+(s/def ::rate number?) ;; the default hourly rate for a given customer
 (s/def ::address-for-latex string?)
 
 (s/def ::customer (s/keys :req-un [::name
@@ -57,25 +56,19 @@
 
 (s/def ::customers (s/coll-of ::customer))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {:deadline 30
    :discount 0})
 
-
 (def merge-defaults
   (partial merge defaults))
 
-
-;; load
-
+;;; load
 
 (defn- latex-line-breaks [s]
-  (replace s "\n" "\\\\\n"))
-
+  (str/replace s "\n" "\\\\\n"))
 
 (defn- add-address-for-latex [customer]
   (->> customer
@@ -83,26 +76,24 @@
        latex-line-breaks
        (assoc* customer :address-for-latex)))
 
-
 (defn- add-year-number [customer]
   (->> (map customer [:year :number])
-       (join "-")
+       (str/join "-")
        (assoc* customer :year-number)))
-
 
 (defn- transform [customer]
   (-> customer
       add-address-for-latex
       add-year-number))
 
-
 (defn load []
-  (->> @config
-       :customers
-       ;; TODO: check if file exists, error otherwise
-       util/slurp
-       util/parse-yaml
-       (util/validate! ::customers)
-       (map merge-defaults)
-       (map transform)
-       (util/validate! ::customers)))
+  (let [path (:customers @config)]
+    (if (util/file-exists? path)
+      (->> path
+           slurp
+           util/parse-yaml
+           (util/validate! ::customers)
+           (map merge-defaults)
+           (map transform)
+           (util/validate! ::customers))
+      (util/warn "customers file missing"))))

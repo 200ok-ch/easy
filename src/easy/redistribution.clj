@@ -9,16 +9,14 @@
       - payer: employee2
         amount: 50000
   ```"
-  (:require [cljs.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]
             [easy.redistribution.account :as account]))
 
-
-;; spec
-
+;;; spec
 
 (s/def ::type #{"redistribution"})
 (s/def ::date util/date?)
@@ -33,27 +31,20 @@
                        :opt-un [::iso-date
                                 ::ledger-template]))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {})
 
-
 (def merge-defaults
   (partial merge defaults))
 
-
-;; helpers
-
+;;; helpers
 
 (defn- transform-accounts [evt]
   (update evt :accounts (partial map #(account/transform % evt))))
 
-
-;; transformers
-
+;;; transformers
 
 (defn add-amount [evt]
   (let [div #(/ % (-> evt :accounts count))]
@@ -64,7 +55,6 @@
          div ;; => one share
          util/round-currency
          (assoc* evt :amount))))
-
 
 (defmethod transform :redistribution [_ evt]
   (-> evt

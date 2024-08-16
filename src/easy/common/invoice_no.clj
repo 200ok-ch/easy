@@ -1,11 +1,9 @@
 (ns easy.common.invoice-no
   (:require [clojure.string :as str]
-            [cljs.spec.alpha :as s]
+            [clojure.spec.alpha :as s]
             [easy.util :as util]))
 
-
-;; spec
-
+;;; spec
 
 (def match-invoice-no (partial re-matches #"^\d+\.\d+\.\d+$"))
 
@@ -20,9 +18,7 @@
                                             ::number
                                             ::version])))
 
-
-;; transformers
-
+;;; transformers
 
 (defn- add-invoice-no
   "Compile `invoice-no` from invoice details like `customer-id`,
@@ -33,18 +29,16 @@
        (str/join ".")
        (util/assoc* evt :invoice-no)))
 
-
 (defn- add-invoice-no-details
   "Derive invoice details like `customer-id`, `number` and `version`
   from `invoice-no`, if given."
   [{:keys [invoice-no] :as evt}]
   (if invoice-no
     (->> (str/split invoice-no #"\.")
-         (map int)
+         (map util/parse-int)
          (zipmap [:customer-id :number :version])
          (util/merge* evt))
     evt))
-
 
 (def unify
   "Transform fn for events that attempts to provide both: a compiled

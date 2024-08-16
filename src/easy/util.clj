@@ -1,14 +1,35 @@
 (ns easy.util
-  (:require [cljs.spec.alpha :as s]
+  (:refer-clojure :exclude [slurp spit file-seq])
+  (:require [clojure.spec.alpha :as s]
             [clojure.pprint :refer [pprint]]
-            [clojure.string :refer [join replace]]
-            ["fs" :as fs]
-            ["js-yaml" :as yaml]
-            ["sync-exec" :as exec]
-            ["sprintf-js" :refer [sprintf]]
-            [cljs-time.format :as time]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clj-time.format :as format]
+            [clj-time.coerce :as coerce]
+            [clojure.java.shell :as shell]
+            [clojure.java.io :as io]
+            [clj-yaml.core :as yaml]
+            [clojure.edn :as edn]
+            [clojure.walk :as walk]
+            [clojure.data.csv :as csv])
+  (:import java.util.Date
+           org.joda.time.DateTime))
 
+(defn int-if-whole [x]
+  (when x
+    (if (-> x int float #{x})
+      (int x)
+      x)))
+
+(defn parse-float [s]
+  (Float/parseFloat s))
+
+(defn parse-int [s]
+  (Integer/parseInt s))
+
+(defn read-csv [path]
+  (with-open [reader (io/reader path)]
+    (doall
+     (csv/read-csv reader))))
 
 (defn bin-by
   "Takes a fn `f` and a colection `coll`, returns a map with the value
@@ -20,58 +41,46 @@
   [f coll]
   (reduce #(update %1 (f %2) conj %2) {} coll))
 
-
 (defn sanitize-latex [text]
   (when text
     (-> text
-        (replace "_" " ") ; FIXME: this is a hack
-        (replace "#" "\\#")
-        (replace "&" "\\&"))))
+        (str/replace "_" " ") ; FIXME: this is a hack
+        (str/replace "#" "\\#")
+        (str/replace "&" "\\&"))))
 
-(defn warn [msg]
-  (.error js/console (clj->js msg))
-  msg)
-
+(defn warn [& args]
+  (binding [*out* *err*]
+    (apply println args))
+  args)
 
 (defn sh [& args]
-  (exec (join " " args)))
-
+  (shell/sh "sh" "-c" (str/join " " args)))
 
 (defn spy [& args]
   (apply pprint args)
   (last args))
 
-
 (defn file-exists? [path]
-  (try
-    (.isFile (.statSync fs path))
-    (catch :default e
-      ;; TODO: output an error message here?
-      false)))
+  (.exists (io/file path)))
 
-
-(defn slurp [path]
-  {:pre [(string? path)]}
-  (try
-    (.readFileSync fs path "utf8")
-    (catch :default e
-      (println "ERROR: Cannot read file " path " due to exception " e))))
-
+(def slurp
+  clojure.core/slurp)
 
 (defn spit [path content]
-  {:pre [(string? path)
-         (string? content)]}
-  (.writeFileSync fs path content))
+  (io/make-parents path)
+  (clojure.core/spit path content))
 
+(def file-seq
+  (comp (partial map (memfn getPath))
+        clojure.core/file-seq
+        io/file))
 
-(defn exit [c]
-  (.exit js/process (or c 0)))
-
+(defn exit [x]
+  (System/exit x))
 
 (defn die [s]
   (warn s)
   (exit 1))
-
 
 (defn indent
   "Indents a multiline string `s` by `n` spaces."
@@ -79,13 +88,8 @@
   (let [i (apply str (repeat n " "))]
     (str i (str/replace s "\n" (str "\n" i)))))
 
-
-(defn write-yaml [x]
-  (-> x
-      clj->js
-      yaml/safeDump
-      (indent 2)))
-
+(def write-yaml
+  yaml/generate-string)
 
 (defn doc-reducer-dispatcher [doc]
   (cond
@@ -100,61 +104,83 @@
   agg)
 
 (defmethod doc-reducer :sequential [{:keys [template] :as aggregator} events]
+  (warn "DEBUG" "SEQ")
   (update aggregator :events concat (map (partial merge template) events)))
 
 (defmethod doc-reducer :map [{:keys [template] :as aggregator} new-template]
+  (warn "DEBUG" "MAP")
   (assoc aggregator :template new-template))
 
 (defn apply-templates [docs]
   ;; Handle one special case, when there is only one doc then return
   ;; it, this allows to read YAML documents that don't hold events to
   ;; be read by the same means
+  ;; (println "-------------------------------------------------------------------------------- " (count docs) (type docs) (-> docs first type))
   (if (= 1 (count docs))
     (first docs)
     (:events (reduce doc-reducer {:template {} :events []} docs))))
+
+(defn parse-yaml-date [date-str]
+  (warn "DEBUG parsing date" date-str)
+  (format/parse (format/formatter "yyyy-MM-dd") date-str))
+
+(def ^:private custom-yaml-tags
+  ;; FIXME: this doesn't seem to do anything, the dates are still of
+  ;; type java.util.Date
+  {java.util.Date parse-yaml-date})
+
+(defn- convert-dates [data]
+  (walk/postwalk
+   (fn [x]
+     (if (instance? java.util.Date x)
+       (coerce/from-long (.getTime x))
+       x))
+   data))
 
 (defn parse-yaml
   "Parses YAML with mulitple docs, and joins these does by applying YAML
   event templates (associatives) to YAML event lists (sequentials) and
   concatenating these lists."
-  [string]
-  (-> string
-      yaml/loadAll
-      (js->clj :keywordize-keys true)
-      apply-templates))
-
+  [string & {:as opts}]
+  (->> (yaml/parse-string string (merge {:load-all true} opts))
+       apply-templates
+       convert-dates))
 
 (defn annotate
   "Annotates all events with `:source-path '<path>:e<index>'`, where
   index is the position of the event in the source file."
   [events path]
+  ;; (pprint (type (doall events)))
   (map-indexed #(assoc %2 :source-path (str path ":e" %1)) events))
 
+(defn date? [x]
+  ;; TODO
+  true)
 
-(def date? (partial instance? js/Date))
+(defn deep-merge [& maps]
+  (apply merge-with (fn [& args]
+                      (if (every? map? args)
+                        (apply deep-merge args)
+                        (last args)))
+         maps))
 
-
-(defn deep-merge [v & vs]
-  (letfn [(rec-merge [v1 v2]
-            (if (and (map? v1) (map? v2))
-              (merge-with deep-merge v1 v2)
-              v2))]
-    (if (some identity vs)
-      (reduce #(rec-merge %1 %2) v vs)
-      (last vs))))
-
+;; (defn deep-merge [v & vs]
+;;   (letfn [(rec-merge [v1 v2]
+;;             (if (and (map? v1) (map? v2))
+;;               (merge-with deep-merge v1 v2)
+;;               v2))]
+;;     (if (some identity vs)
+;;       (reduce #(rec-merge %1 %2) v vs)
+;;       (last vs))))
 
 (def iso-formatter
-  (time/formatter "yyyy-MM-dd"))
-
+  (format/formatter "yyyy-MM-dd"))
 
 (def round-currency
-  (comp js/parseFloat (partial sprintf "%.2f")))
-
+  (comp edn/read-string (partial format "%.2f") float))
 
 (defn include? [item collection]
   (some #{item} collection))
-
 
 (defn assoc*
   "Like `assoc` but adds `key` only if hashmap does not already have
@@ -169,12 +195,10 @@
       hashmap)
     (assoc hashmap key value)))
 
-
 (defn merge*
   "A rather perculiar implementation of reverse-merge."
   [a b]
   (reduce (fn [acc [key val]] (assoc* acc key val)) a b))
-
 
 (defn validate!
   "Validates `x` against `spec` and exits the process in case `x` does
@@ -184,23 +208,25 @@
   (if-not (s/valid? spec x)
     (do
       (println (write-yaml x))
-      (s/explain spec x)
-      (process.exit 1))
+      (println (s/explain spec x))
+      (exit 1))
     x))
 
-
 (defn harmonize-date-field [field evt]
+  ;; (println field (type (field evt)))
   (if-let [date (field evt)]
     (if (string? date)
-      ;; NOTE don't use this, this does not return an instance of Date
-      ;; (assoc evt field (time/parse util/iso-formatter date))
-      (assoc evt field (js/Date. date))
+      (assoc evt field (parse-yaml-date date))
       evt)
     evt))
-
 
 (defn assert-only-one! [msg x]
   (assert (= 1 (count x)) msg)
   x)
 
-(def format sprintf) ;; clojure.core/format
+(extend-protocol yaml/YAMLCodec
+  org.joda.time.DateTime
+  (encode [data]
+    (format/unparse iso-formatter data)))
+
+(def format clojure.core/format)

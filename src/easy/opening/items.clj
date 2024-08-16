@@ -1,23 +1,18 @@
 (ns easy.opening.items
-  (:require [cljs.spec.alpha :as s]))
+  (:require [clojure.spec.alpha :as s]))
 
-
-;; spec
-
+;;; spec
 
 (s/def ::account string?)
-(s/def ::amount float?)
+(s/def ::amount number?)
 
 (s/def ::item (s/keys :req-un [::account
                                ::amount]))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {})
-
 
 (def merge-defaults
   (partial merge defaults))

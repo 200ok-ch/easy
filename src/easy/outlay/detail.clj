@@ -5,13 +5,11 @@
     account: Aktiva:6500-Büromaterial
     addendum: Büromaterial
   ```"
-  (:require [cljs.spec.alpha :as s]))
+  (:require [clojure.spec.alpha :as s]))
 
+;;; spec
 
-;; spec
-
-
-(s/def ::amount float?)
+(s/def ::amount number?)
 (s/def ::account string?)
 (s/def ::addendum string?)
 

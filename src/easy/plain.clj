@@ -10,21 +10,19 @@
     amount: 49.95
     description: Spesen-Sammelbuchung Miete
   ```"
-  (:require [cljs.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
             [easy.common :as common]
             [easy.config :refer [config]]
             [easy.transform :refer [transform]]))
 
-
-;; spec
-
+;;; spec
 
 (s/def ::type #{"plain"})
 (s/def ::date util/date?)
 (s/def ::source string?)
 (s/def ::target string?)
-(s/def ::amount float?)
+(s/def ::amount number?)
 
 (s/def ::description string?)
 (s/def ::iso-date (s/and string? common/match-iso-date))
@@ -39,20 +37,15 @@
                                 ::description
                                 ::ledger-template]))
 
-
-;; defaults
-
+;;; defaults
 
 (def defaults
   {})
 
-
 (def merge-defaults
   (partial merge defaults))
 
-
-;; transformers
-
+;;; transformers
 
 (defmethod transform :plain [_ evt]
   (-> evt
