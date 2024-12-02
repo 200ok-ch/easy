@@ -26,7 +26,7 @@
 
 ;;; spec
 
-(def match-period (partial re-matches #"^\d{4}-(H|Q)\d$"))
+(def match-tax-period (partial re-matches #"^\d{4}-(H|Q)\d$"))
 
 (s/def ::type #{"settlement"})
 (s/def ::date util/date?)
@@ -41,7 +41,7 @@
 (s/def ::tax-win number?)
 (s/def ::net-total number?)
 (s/def ::remaining number?)
-(s/def ::period (s/and string? match-period))
+(s/def ::tax-period (s/and string? match-tax-period))
 (s/def ::ledger-template (s/and string? common/match-template))
 (s/def ::latex-template (s/and string? common/match-template))
 (s/def ::latex-content string?)
@@ -62,7 +62,7 @@
                                  ::tax-win
                                  ::net-total
                                  ::remaining
-                                 ::period
+                                 ::tax-period
                                  ::ledger-state
                                  ::ledger-template
                                  ::latex-template
@@ -337,7 +337,7 @@
       (resolve-invoice (:invoice context))
       add-deferral
       common/add-iso-date
-      tax/add-period
+      tax/add-tax-period
       transform-items
       add-net-total
       add-delcredere

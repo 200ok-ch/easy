@@ -33,7 +33,7 @@
 ;;; spec
 
 (def match-invoice-no (partial re-matches #"^\d+\.\d+\.\d+$"))
-(def match-period (partial re-matches #"^\d{4}-(H|Q)\d$"))
+(def match-tax-period (partial re-matches #"^\d{4}-(H|Q)\d$"))
 
 (s/def ::type #{"invoice"})
 (s/def ::date util/date?)
@@ -50,7 +50,7 @@
 (s/def ::tax-win number?)
 (s/def ::net-total number?)
 (s/def ::gross-total number?)
-(s/def ::period (s/and string? match-period))
+(s/def ::tax-period (s/and string? match-tax-period))
 (s/def ::ledger-state #{"!" "*"})
 (s/def ::ledger-template (s/and string? common/match-template))
 (s/def ::latex-template (s/and string? common/match-template))
@@ -78,7 +78,7 @@
                                  ::tax-win
                                  ::net-total
                                  ::gross-total
-                                 ::period
+                                 ::tax-period
                                  ::ledger-state
                                  ::ledger-template
                                  ::latex-template
@@ -283,6 +283,12 @@
       ;; TODO: run xdg-open on the pdf file
       ))
 
+(defn add-bookings-if-other-period [{[from to] :period :as evt}]
+  (if (and from to)
+    ;; TODO: add bookings for mulitple periods here
+    (assoc evt :bookings [])
+    evt))
+
 (defmethod transform :invoice [context evt]
   (-> evt
       (common/validate! ::event)
@@ -291,7 +297,7 @@
       (resolve-settlement (:settlement context))
       common/add-iso-date
       add-deferral
-      tax/add-period
+      tax/add-tax-period
       add-ledger-state
       add-tax-rate-in
       add-tax-rate-out
@@ -305,4 +311,5 @@
       add-tax-win
       add-templates
       add-deadline-iso-date
+      add-bookings-if-other-period
       (common/validate! ::event)))

@@ -45,14 +45,14 @@
 
 ;; transformers
 
-(defn add-period
+(defn add-tax-period
   "The period is when the vat is due."
-  ([evt] (add-period evt [:date]))
+  ([evt] (add-tax-period evt [:date]))
   ([evt date-path]
    (if-let [date (get-in evt date-path)]
      (let [year (time/year date)
            semester (if (< (time/month date) 6) 1 2)
            period (str year "-H" semester)]
-       (assoc* evt :period period))
+       (assoc* evt :tax-period period))
      ;; no date found, in context of a nested transform, that's ok
      evt)))

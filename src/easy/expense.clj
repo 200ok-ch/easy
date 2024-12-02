@@ -89,7 +89,7 @@
       common/add-iso-date
       add-respect-tax-rate
       add-respect-tax-amount
-      tax/add-period
+      tax/add-tax-period
       fix-invoice-date
       add-deferral
       add-description-with-addendum
