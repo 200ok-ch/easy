@@ -93,8 +93,8 @@
       (str/replace #" " "-")
       keyword))
 
-(def formatters-in [(format/formatter "MM.dd.yyyy")
-                    (format/formatter "MM/dd/yyyy")])
+(def formatters-in [(format/formatter "dd.MM.yyyy")
+                    (format/formatter "yyyy-MM-dd")])
 
 (def formatter-out (format/formatter "yyyy-MM-dd"))
 
@@ -131,12 +131,15 @@
   (util/warn "DEBUG BOOKING:" booking) ;; DEBUGGING
   (-> booking
       (set/rename-keys {:account :target
-                        :date :iso-date})
+                        ;; retired in 2025
+                        :date :iso-date
+                        ;; new in 2025
+                        :booking-date :iso-date})
       (assoc :amount (* -1 (util/parse-float (or (not-empty (:credit-in-chf booking))
                                                  (not-empty (:debit-in-chf booking))))))
       (update :amount util/round-currency)
       ;; (update :amount fix-amount booking)
-      ;; (update :iso-date fix-date)
+      (update :iso-date fix-date)
       ;; (update :invoice-date fix-date)
       ;; (update :due-date fix-date)
       ;; (merge (get mappings (keyword (:virtual-card-number booking)) {:target (default-target evt booking)}))
