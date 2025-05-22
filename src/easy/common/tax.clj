@@ -1,10 +1,13 @@
 (ns easy.common.tax
-  (:require [clojure.spec.alpha :as s]
-            [easy.config :refer [config]]
-            [easy.util :as util :refer [assoc*]]
-            [easy.log :as log]
-            [easy.common :as common]
-            [clj-time.core :as time]))
+  (:require
+   [clojure.spec.alpha :as s]
+   [clojure.string :as str]
+   [clojure.walk :as walk]
+   [easy.config :refer [config]]
+   [easy.util :as util :refer [assoc*]]
+   [easy.log :as log]
+   [easy.common :as common]
+   [clj-time.core :as time]))
 
 ;; specs
 
@@ -20,28 +23,56 @@
 
 ;; helpers
 
-(defn- assert-exactly-one [coll]
-  (case (count coll)
-    ;; non found -> abort
-    0 (util/die "Collection with one expected entry found empty!")
-    ;; all good
-    1 (first coll)
-    ;; else (more than 1)
-    (do
-      (util/warn (str "Found more than one entry in collection, "
-                      "when exactly one was expected. "
-                      "Just picked the first from " coll))
-      (first coll))))
+;; (defn unordered [ordered]
+;;   (walk/postwalk (fn [x] (if (map? x) (into {} x) x)) ordered))
+;;
+;; (defn- assert-exactly-one [coll]
+;;   (case (count coll)
+;;     ;; non found -> abort
+;;     0 (util/die "Collection with one expected entry found empty!")
+;;     ;; all good
+;;     1 (first coll)
+;;     ;; else (more than 1)
+;;     (do
+;;       (util/warn (str "Found more than one entry in collection, "
+;;                       "when exactly one was expected. "
+;;                       "Just picked the first from:"))
+;;       (doseq [entry coll]
+;;         (util/warn (str "- " (str/trim (prn-str (unordered entry))))))
+;;       (first coll))))
+
+(defn- applicable? [date {:keys [since until]}]
+  ;; keep it
+  (and
+   (or
+    ;; if it has no :since
+    (nil? since)
+    ;;or if the :since is before the event's date
+    (time/before? since date))
+   ;; and
+   (or
+    ;; if it has no :until
+    (nil? until)
+    ;; or :until is after the event's date
+    (time/after? until date))))
 
 (defn lookup-rate
-  [key {:keys [date]}]
+  "Takes a KEY and an EVT"
+  [key {:keys [date] :as evt}]
   (->> @config
        key
        ;; TODO: use `(common/validate! ::rates)` here
-       (filter #(or (nil? (:since %)) (not (time/before? date (:since %)))))
-       (filter #(or (nil? (:until %)) (not (time/after? date (:until %)))))
-       assert-exactly-one
+       (filter (partial applicable? date))
+       ;; if there are mulitple the last :since should win
+       (sort-by :since)
+       last
        :rate))
+
+(comment
+  (require '[clj-time.format :as f])
+  ;; is x before y
+  (time/before? (f/parse "2024-01-01") (f/parse "2025-01-01"))
+  )
 
 ;; transformers
 

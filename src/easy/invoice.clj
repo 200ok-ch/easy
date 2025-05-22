@@ -119,12 +119,16 @@
          (assoc* evt :settlement))))
 
 (defn add-tax-rate-in [evt]
-  (->> (tax/lookup-rate :vat-tax-rate-in evt)
-       (assoc* evt :tax-rate-in)))
+  (if (:tax-free evt)
+    (assoc* evt :tax-rate-in 0)
+    (->> (tax/lookup-rate :vat-tax-rate-in evt)
+         (assoc* evt :tax-rate-in))))
 
 (defn add-tax-rate-out [evt]
-  (->> (tax/lookup-rate :vat-tax-rate-out evt)
-       (assoc* evt :tax-rate-out)))
+  (if (:tax-free evt)
+    (assoc* evt :tax-rate-out 0)
+    (->> (tax/lookup-rate :vat-tax-rate-out evt)
+         (assoc* evt :tax-rate-out))))
 
 (defn add-tax-in [evt]
   (->> (:net-total evt)

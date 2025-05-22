@@ -107,8 +107,11 @@
 
 (defn- add-description [{:keys [hours addendum rate] :as item}]
   ;; TODO: make this default adjustable via config or templates
-  (->> (str "Beratung " addendum " (" hours " x " rate " CHF/Std.)")
-       (assoc* item :description)))
+  ;; only add a description preset if we have the data to render something meaningful
+  (if (and hours rate)
+    (->> (str "Beratung " addendum " (" hours " x " rate " CHF/Std.)")
+         (assoc* item :description))
+    item))
 
 (defn transform [item invoice]
   (-> item
