@@ -138,7 +138,7 @@
    data))
 
 (defn parse-yaml
-  "Parses YAML with mulitple docs, and joins these does by applying YAML
+  "Parses YAML with mulitple docs, and joins these docs by applying YAML
   event templates (associatives) to YAML event lists (sequentials) and
   concatenating these lists."
   [string & {:as opts}]
