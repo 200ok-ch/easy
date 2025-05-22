@@ -73,7 +73,7 @@
        (assoc* evt :mappings)))
 
 (defn add-files [evt]
-  (util/warn "DEBUG" evt)
+  ;; (util/warn "DEBUG" evt)
   (->> evt
        :path
        util/file-seq
@@ -128,7 +128,7 @@
        util/parse-float))
 
 (defn prepare-booking [{:keys [mappings] :as evt} booking]
-  (util/warn "DEBUG BOOKING:" booking) ;; DEBUGGING
+  ;; (util/warn "DEBUG BOOKING:" booking) ;; DEBUGGING
   (-> booking
       (set/rename-keys {:account :target
                         ;; retired in 2025
@@ -159,7 +159,7 @@
       keyword))
 
 (defn lines-reducer [{:keys [mappings header] :as agg} line]
-  (util/warn "DEBUG" line)
+  ;; (util/warn "DEBUG" line)
   (let [{:keys [account] :as booking}
         (->> mappings
              (filter #(re-find (-> % :pattern re-pattern) line))
@@ -176,7 +176,7 @@
   (reduce lines-reducer {:mappings mappings} lines))
 
 (defn spy [x]
-  (util/warn "PFCC DEBUG" x)
+  ;; (util/warn "PFCC DEBUG" x)
   x)
 
 (defn add-bookings [evt]

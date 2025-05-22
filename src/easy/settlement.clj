@@ -133,7 +133,7 @@
   tax-in: (* @n @t)
   ```"
   [evt]
-  (log/debug-evt evt "tax-in = " (:net-total evt) " x " (-> evt :invoice :tax-rate-in))
+  ;; (log/debug-evt evt "tax-in = " (:net-total evt) " x " (-> evt :invoice :tax-rate-in))
   (->> (:net-total evt)
        (* (-> evt :invoice :tax-rate-in (or 0)))
        util/round-currency
@@ -149,14 +149,14 @@
   tax-out: (* @a @t)
   ```"
   [evt]
-  (log/debug-evt evt "tax-out = " (:amount evt) " x " (-> evt :invoice :tax-rate-out))
+  ;; (log/debug-evt evt "tax-out = " (:amount evt) " x " (-> evt :invoice :tax-rate-out))
   (->> (:amount evt)
        (* (-> evt :invoice :tax-rate-out (or 0)))
        util/round-currency
        (assoc* evt :tax-out)))
 
 (defn add-tax-win [evt]
-  (log/debug-evt evt "tax-win = " (:tax-in evt) " - " (:tax-out evt))
+  ;; (log/debug-evt evt "tax-win = " (:tax-in evt) " - " (:tax-out evt))
   (->> (:tax-out evt)
        (- (:tax-in evt))
        util/round-currency
@@ -327,9 +327,9 @@
 ;; `context` can also be nil, this is the case if the event is
 ;; transformed while being resolved for another event
 (defmethod transform :settlement [context evt]
-  (if context
-    (log/debug-evt evt "TRANSFORM WITH CONTEXT")
-    (log/debug-evt evt "TRANSFORM WITHOUT CONTEXT"))
+  ;; (if context
+  ;;   (log/debug-evt evt "TRANSFORM WITH CONTEXT")
+  ;;   (log/debug-evt evt "TRANSFORM WITHOUT CONTEXT"))
   (-> evt
       (common/validate! ::event)
       merge-defaults

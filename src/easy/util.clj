@@ -104,11 +104,11 @@
   agg)
 
 (defmethod doc-reducer :sequential [{:keys [template] :as aggregator} events]
-  (warn "DEBUG" "SEQ")
+  ;; (warn "DEBUG" "SEQ")
   (update aggregator :events concat (map (partial merge template) events)))
 
 (defmethod doc-reducer :map [{:keys [template] :as aggregator} new-template]
-  (warn "DEBUG" "MAP")
+  ;; (warn "DEBUG" "MAP")
   (assoc aggregator :template new-template))
 
 (defn apply-templates [docs]
@@ -121,7 +121,7 @@
     (:events (reduce doc-reducer {:template {} :events []} docs))))
 
 (defn parse-yaml-date [date-str]
-  (warn "DEBUG parsing date" date-str)
+  ;; (warn "DEBUG parsing date" date-str)
   (format/parse (format/formatter "yyyy-MM-dd") date-str))
 
 (def ^:private custom-yaml-tags
