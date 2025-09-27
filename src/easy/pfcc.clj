@@ -172,23 +172,33 @@
       (update agg :bookings conj
               (merge (zipmap header (str/split line #";")) booking)))))
 
+;; this returns a map with :mappings, :header, and :bookings
 (defn bookings-from-lines [mappings lines]
   (reduce lines-reducer {:mappings mappings} lines))
 
 (defn spy [x]
-  ;; (util/warn "PFCC DEBUG" x)
+  (binding [*out* *err*]
+    (println "--- PFCC DEBUG ---")
+    (pprint x)
+    (System/exit 1))
   x)
 
 (defn add-bookings [evt]
   (->> evt
        :lines
        (map (partial bookings-from-lines (:mappings evt)))
-       spy
+       ;; spy
        (map :bookings)
        flatten
        (map (partial prepare-booking evt))
        (map drop-boring)
-       (sort-by :date)
+       ;; remove the ones from the Current accounting period, they
+       ;; will re-surface in later exports and they mess up the
+       ;; following `distinct`
+       (remove (comp #{"Current accounting period"} :invoicing-period))
+       (sort-by :iso-date)
+       distinct
+       ;; spy
        (map-indexed #(assoc %2 :index %1))
        (assoc* evt :bookings)))
 
