@@ -18,7 +18,6 @@
   ```"
   (:require [clojure.spec.alpha :as s]
             [easy.util :as util :refer [assoc*]]
-            [easy.log :as log]
             [easy.common :as common]
             [easy.common.invoice-no :as invoice-no]
             [easy.common.tax :as tax]
@@ -59,6 +58,15 @@
 (s/def ::latex-filename string?)
 (s/def ::pdflatex-cmd string?)
 
+(s/def ::description string?)
+(s/def ::amount number?)
+
+(s/def ::late-payment-charges (s/or :flag boolean
+                                    :items
+                                    (s/coll-of
+                                     (s/keys :req-un [::description
+                                                      ::amount]))))
+
 (s/def ::event (s/and
                 (s/keys :req-un [::type
                                  ::date
@@ -79,6 +87,7 @@
                                  ::net-total
                                  ::gross-total
                                  ::period
+                                 ::late-payment-charges
                                  ::ledger-state
                                  ::ledger-template
                                  ::latex-template
@@ -287,6 +296,28 @@
       ;; TODO: run xdg-open on the pdf file
       ))
 
+(defn- add-late-payment-charges [{:keys [late-payment-charges
+                                         net-total
+                                         ;; the date of the reminder
+                                         date
+                                         ;; the date of the invoice that the reminder is for
+                                         original-date] :as evt}]
+  (println "@@@" late-payment-charges net-total date original-date)
+  (if (true? late-payment-charges)
+    (let [due-date (time/plus (util/parse-yaml-date original-date) (time/days (:deadline evt)))
+          days-overdue (time/in-days (time/interval due-date date))]
+      (assoc evt
+             :subject "Mahnung"
+             :late-payment-charges [{:description (str "Verzugszins 5\\%pa " days-overdue " Tage")
+                                     :amount (* net-total 0.05 (/ days-overdue 365))}
+                                    {:description "Mahngebühr"
+                                     :amount 50}]))
+    evt))
+
+(defn- add-total [{:keys [gross-total
+                          late-payment-charges] :as evt}]
+  (assoc evt :total (apply + (concat [gross-total] (map :amount late-payment-charges)))))
+
 (defmethod transform :invoice [context evt]
   (-> evt
       (common/validate! ::event)
@@ -309,4 +340,6 @@
       add-tax-win
       add-templates
       add-deadline-iso-date
+      add-late-payment-charges
+      add-total
       (common/validate! ::event)))
