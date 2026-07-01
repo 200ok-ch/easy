@@ -82,7 +82,7 @@
   ([evt date-path]
    (if-let [date (get-in evt date-path)]
      (let [year (time/year date)
-           semester (if (< (time/month date) 6) 1 2)
+           semester (if (<= (time/month date) 6) 1 2)
            period (str year "-H" semester)]
        (assoc* evt :period period))
      ;; no date found, in context of a nested transform, that's ok
